@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="JaScan">
+<meta name="theme-color" content="#F3F5F9">
+<title>JaScan 收據分帳</title>
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<style>
+/* VOICE: calm money tool, quiet and exact, like a good banking app.
+   IDEA: a receipt slip — the hero card has a torn zigzag edge, amounts sit in tabular columns.
+   PICTURE: the trip total on a deep-blue torn receipt card, settlements directly beneath.
+   COLOUR and TYPE: deep blue from the icon on white/near-white; red = owes, blue = gets back, green = tax-free. System PingFang, tabular figures.
+   LAYOUT: single phone column, max 560px, sticky bottom bar with a raised round scan button. */
+:root{color-scheme:light dark;
+--bg:light-dark(#EDF0F5,#0A101C);--card:light-dark(#FFFFFF,#131C2C);--card2:light-dark(#F6F8FB,#1A2538);
+--ink:light-dark(#0F1B2D,#E8EEF7);--mute:light-dark(#69768A,#8E9BB2);--line:light-dark(#E5E9F0,#24324A);
+--pri:light-dark(#0A5FC2,#4C9BFF);--pri-soft:light-dark(#E8F1FC,#16294A);--deep:#0B2A5C;
+--neg:light-dark(#D93D42,#FF6B6F);--ok:light-dark(#138A4B,#3DD68C);--ok-soft:light-dark(#E6F6EE,#11301F);
+--warn:light-dark(#B45309,#F5B14C);--warn-soft:light-dark(#FDF3E3,#33260F);
+--r:18px;--shadow:0 1px 2px rgba(15,27,45,.04),0 6px 20px rgba(15,27,45,.06)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font:16px/1.5 -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;overflow-x:clip;font-variant-numeric:tabular-nums}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none;padding:0}
+:focus-visible{outline:2px solid var(--pri);outline-offset:2px;border-radius:8px}
+.wrap{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 14px) 16px calc(110px + env(safe-area-inset-bottom))}
+.top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.top img{width:40px;height:40px;border-radius:11px;flex:none}
+.top .t{flex:1}
+.top h1{font-size:19px;line-height:1.25;margin:0;font-weight:700;display:flex;align-items:center;gap:2px;white-space:nowrap}
+.top h1 span{overflow:hidden;text-overflow:ellipsis}
+.top #tripSw{max-width:100%;display:block}
+.top small{color:var(--mute);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.seg{display:inline-flex;background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:3px;flex:none}
+.seg button{padding:6px 12px;border-radius:999px;font-size:14px;font-weight:600;color:var(--mute);min-height:32px}
+.seg button.on{background:var(--card);color:var(--pri);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.hero{position:relative;color:#fff;background:linear-gradient(155deg,#0A6AD6 0%,#0B3F8F 55%,#0B2A5C 100%);border-radius:var(--r) var(--r) 0 0;padding:20px 20px 30px;margin-bottom:22px;
+-webkit-mask:radial-gradient(circle 7px at 7px 100%,transparent 6.5px,#000 7px) 0 0/14px 100% repeat-x;mask:radial-gradient(circle 7px at 7px 100%,transparent 6.5px,#000 7px) 0 0/14px 100% repeat-x}
+.hero .lbl{font-size:14px;opacity:.85}
+.hero .big{font-size:clamp(34px,10vw,44px);font-weight:700;line-height:1.1;letter-spacing:-.5px;margin:4px 0 2px}
+.hero .sub{font-size:14px;opacity:.85}
+.hero .row{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.16);border-radius:999px;padding:5px 11px;font-size:13px;white-space:nowrap}
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);border:1px solid var(--line);padding:18px;margin-bottom:20px}
+.card h2{font-size:16px;margin:0 0 10px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.card h2:has(.ht){font-size:19px;font-weight:700;margin:-2px 0 14px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.ht{display:inline-flex;align-items:center;gap:10px}
+.ht i{width:32px;height:32px;border-radius:10px;background:var(--pri-soft);color:var(--pri);display:grid;place-items:center;font-style:normal;flex:none}
+.ht i svg{width:18px;height:18px}
+.card h2 small{font-size:13px;color:var(--mute);font-weight:400}
+.muted{color:var(--mute)}.small{font-size:13px}
+.neg{color:var(--neg)}.pos{color:var(--pri)}.okc{color:var(--ok)}
+.av{width:30px;height:30px;border-radius:50%;display:inline-grid;place-items:center;color:#fff;font-size:13px;font-weight:700;flex:none}
+.xfer{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.xfer:first-of-type{border-top:0}
+.xfer .who{flex:1;display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:15px}
+.xfer .amt{font-weight:700;white-space:nowrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 16px;border-radius:12px;font-weight:600;font-size:15px;white-space:nowrap}
+.btn.sm{min-height:34px;padding:0 12px;font-size:13px;border-radius:10px}
+.btn.pri{background:var(--pri);color:#fff}
+.btn.soft{background:var(--pri-soft);color:var(--pri)}
+.btn.ghost{background:var(--card2);color:var(--ink);border:1px solid var(--line)}
+.btn.danger{background:var(--card);color:var(--neg);border:1px solid var(--line)}
+.btn.block{width:100%}
+.btn:disabled{opacity:.4}
+.ptable{width:100%;border-collapse:collapse;font-size:14px}
+.ptable th{font-weight:500;color:var(--mute);font-size:12px;text-align:right;padding:0 0 6px}
+.ptable th:first-child{text-align:left}
+.ptable td{padding:9px 0;border-top:1px solid var(--line);text-align:right;white-space:nowrap}
+.ptable td:first-child{text-align:left}
+.ptable .nm{display:flex;align-items:center;gap:8px}
+.rc{display:flex;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--line);width:100%;text-align:left}
+.rc:first-of-type{border-top:0}
+.tile{width:42px;height:42px;border-radius:12px;background:var(--pri-soft);color:var(--pri);display:grid;place-items:center;flex:none}
+.rc .mid{flex:1}
+.rc .mid b{display:block;font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rc .mid span{font-size:12px;color:var(--mute);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rc .rt{text-align:right;flex:none}
+.rc .rt b{display:block;font-size:15px}
+.tag{display:inline-block;font-size:11px;font-weight:600;padding:2px 7px;border-radius:6px;margin-top:3px;white-space:nowrap}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}.tag.warn{background:var(--warn-soft);color:var(--warn)}.tag.gray{background:var(--card2);color:var(--mute)}
+.day{font-size:12px;color:var(--mute);font-weight:600;margin:14px 0 2px}
+.day:first-child{margin-top:0}
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:color-mix(in srgb,var(--card) 88%,transparent);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.nav .in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:1fr 96px 1fr;height:62px;align-items:center}
+.nav .tab{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--mute);height:100%;justify-content:center}
+.nav .tab.on{color:var(--pri)}
+.scanbtn{justify-self:center;width:64px;height:64px;border-radius:50%;background:linear-gradient(155deg,#0A6AD6,#0B2A5C);color:#fff;display:grid;place-items:center;margin-top:-26px;box-shadow:0 8px 20px rgba(10,95,194,.4);border:4px solid var(--bg)}
+.scanbtn:active{transform:scale(.96)}
+.hdr{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.hdr h1{flex:1;font-size:19px;margin:0;text-align:center}
+.icb{width:44px;height:44px;display:grid;place-items:center;border-radius:12px;color:var(--ink);flex:none}
+.icb:active{background:var(--card2)}
+.note{border-radius:14px;padding:12px 14px;font-size:14px;margin-bottom:14px;display:flex;gap:10px;align-items:flex-start}
+.note.info{background:var(--pri-soft);color:var(--ink)}.note.ok{background:var(--ok-soft)}.note.warn{background:var(--warn-soft)}
+.note svg{flex:none;margin-top:2px}
+.shots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.shot{position:relative;aspect-ratio:3/4;border-radius:14px;overflow:hidden;background:var(--card2)}
+.shot img{width:100%;height:100%;object-fit:cover;display:block}
+.shot .n{position:absolute;left:6px;top:6px;background:rgba(0,0,0,.55);color:#fff;font-size:12px;font-weight:700;border-radius:8px;padding:1px 7px}
+.shot .x{position:absolute;right:4px;top:4px;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;display:grid;place-items:center}
+.addshot{aspect-ratio:3/4;border-radius:14px;border:2px dashed var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--pri);font-size:13px;font-weight:600;text-align:center;padding:6px;cursor:pointer}
+.empty{border:2px dashed var(--line);border-radius:var(--r);padding:28px 16px;text-align:center;color:var(--mute)}
+.empty svg{color:var(--pri);margin-bottom:6px}
+.field{display:block;margin-bottom:12px}
+.field>span{display:block;font-size:13px;color:var(--mute);margin-bottom:4px}
+.inp{width:100%;min-height:44px;border:1px solid var(--line);background:var(--card2);border-radius:12px;padding:10px 12px;font-size:16px}
+textarea.inp{min-height:110px;font-size:13px;font-family:ui-monospace,Menlo,monospace}
+.row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:3px 12px 3px 3px;border-radius:999px;border:1px solid var(--line);background:var(--card);font-size:14px;font-weight:500}
+.chip{opacity:.5;transition:opacity .15s,background .15s}
+.chip .av{width:28px;height:28px;font-size:12px;filter:grayscale(1)}
+.chip.on{opacity:1;border:1.5px solid var(--pri);background:var(--pri-soft);color:var(--pri);font-weight:700}
+.chip.on .av{filter:none}
+.chip.on::after{content:"";width:14px;height:14px;margin-left:-2px;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7'/%3E%3C/svg%3E") center/contain no-repeat}
+.chip.txt.on::after{display:none}
+.chip.ic{padding:3px}.chip.ic .cn{display:none}.chip.ic.on::after{display:none}.chip.ic.on{box-shadow:0 0 0 1.5px var(--pri)}
+.adjl{display:flex;align-items:flex-start;gap:6px}
+.delx{width:24px;height:24px;border-radius:50%;background:var(--card2);color:var(--mute);display:grid;place-items:center;flex:none;margin-top:1px}
+.delx svg{width:14px;height:14px}
+.chip.txt{padding:3px 12px}
+.item{border-top:1px solid var(--line);padding:12px 0}
+.item:first-child{border-top:0;padding-top:2px}
+.it-top{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px}
+.it-name{flex:1;text-align:left}
+.it-name b{display:block;font-size:15px;font-weight:600}
+.it-name small{display:block;font-size:12px;color:var(--mute)}
+.it-name em{display:block;font-style:normal;font-size:12px;color:var(--pri);margin-top:1px}
+.it-amt{text-align:right;white-space:nowrap}
+.it-amt b{display:block;font-size:15px}
+.it-amt small{display:block;font-size:12px;color:var(--mute)}
+.unas{outline:2px dashed var(--warn);outline-offset:4px;border-radius:6px}
+.sum{display:grid;grid-template-columns:1fr auto;gap:4px 0;font-size:14px}
+.sum .r{text-align:right;white-space:nowrap;padding-left:12px}
+.chip.plain{opacity:1}.chip.plain .av{filter:none}
+.sum .tot{font-weight:700;font-size:16px;border-top:1px solid var(--line);padding-top:6px}
+.paybox{display:grid;grid-template-columns:auto 1fr 120px;gap:8px 10px;align-items:center;margin-top:10px}
+.paybox .inp{text-align:right}
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;font-size:15px}
+.sw{position:relative;width:51px;height:31px;flex:none}
+.sw input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.sw i{position:absolute;inset:0;border-radius:999px;background:var(--line);transition:.2s}
+.sw i::after{content:"";position:absolute;left:2px;top:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:.2s}
+.sw input:checked+i{background:var(--ok)}
+.sw input:checked+i::after{transform:translateX(20px)}
+body.focus .nav{display:none}
+body.focus .wrap{padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+.sticky{position:sticky;bottom:calc(12px + env(safe-area-inset-bottom));z-index:5;display:flex;gap:10px;padding-top:6px}
+.sticky .btn{box-shadow:0 6px 18px rgba(15,27,45,.14)}
+.list li{margin-bottom:6px}
+.chk{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
+.chk:first-child{border-top:0}
+.chk input{width:22px;height:22px;accent-color:var(--ok);flex:none}
+.chk .f{flex:1}
+.chk .f small{display:block;color:var(--mute);font-size:12px}
+.setrow{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.setrow:first-of-type{border-top:0}
+.setrow .f{flex:1}
+.setrow .f small{display:block;color:var(--mute);font-size:12px}
+.scrim{position:fixed;inset:0;background:rgba(5,12,24,.45);z-index:40;display:flex;align-items:flex-end;justify-content:center;animation:fade .18s}
+.sheet{background:var(--card);width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:10px 18px calc(20px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto;animation:up .22s ease-out}
+.sheet .grab{width:38px;height:5px;border-radius:9px;background:var(--line);margin:0 auto 12px}
+.sheet h3{margin:0 0 12px;font-size:18px}
+.loading{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;text-align:center}
+.loading .rcpt{width:120px;height:150px;background:var(--card);border-radius:10px;box-shadow:var(--shadow);position:relative;overflow:hidden;padding:18px 16px}
+.loading .rcpt i{display:block;height:7px;border-radius:4px;background:var(--line);margin-bottom:10px}
+.loading .beam{position:absolute;left:0;right:0;height:3px;background:#22C55E;box-shadow:0 0 14px #22C55E;animation:beam 1.4s ease-in-out infinite alternate}
+.toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#0F1B2D;color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;z-index:60;max-width:90vw;text-align:center;animation:fade .2s}
+@keyframes fade{from{opacity:0}}@keyframes up{from{transform:translateY(40px);opacity:.4}}
+@keyframes beam{from{top:6%}to{top:92%}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.demo{font-size:12px;color:var(--mute);text-align:center;margin:4px 0 14px}
+</style>
+</head>
+<body>
+<div id="app" class="wrap"></div>
+<nav class="nav" aria-label="主選單"><div class="in">
+  <button class="tab" id="nav-home" data-go="home"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z"/></svg>總覽</button>
+  <button class="scanbtn" data-go="scan" aria-label="掃描收據"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M4 12h16"/></svg></button>
+  <button class="tab" id="nav-settings" data-go="settings"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>設定</button>
+</div></nav>
+<input type="file" id="camIn" accept="image/*" capture="environment" hidden>
+<input type="file" id="libIn" accept="image/*" multiple hidden>
+<script>
+{
+const ICON='icons/logo.jpg';
+const KEY='jascan.v1';
+const COLORS=['#0A5FC2','#E5484D','#18A058','#E08A00','#8E4EC6','#0E9F9E','#C2410C','#475569'];
+const $=s=>document.querySelector(s);
+const app=$('#app');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Math.random().toString(36).slice(2,9);
+const clone=o=>JSON.parse(JSON.stringify(o));
+const I={
+ back:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"/></svg>',
+ close:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+ down:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>',
+ cam:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+ img:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m5 18 5-5 4 4 2-2 3 3"/></svg>',
+ rcpt:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M6 3h12v18l-2-1.5L14 21l-2-1.5L10 21l-2-1.5L6 21z"/><path d="M9 8h6M9 12h6"/></svg>',
+ info:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>',
+ plus:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+ arrow:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+ tax:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>',
+ plane:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M10.5 13.5 3 11l1.5-1.5 8 1L17 6c1-1 3-1.5 3.5-1S20 7 19 8l-4.5 4.5 1 8L14 22l-2.5-7.5L8 18v2.5L6.5 22 5 18l-4-1.5L2.5 15H5z"/></svg>',
+ edit:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>'
+};
+
+const HI={wallet:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7a2 2 0 0 1 2-2h11v4"/><path d="M4 7v11a2 2 0 0 0 2 2h14V9H6a2 2 0 0 1-2-2"/><circle cx="16" cy="14.5" r="1.2"/></svg>',list:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>',calc:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01"/></svg>',swap:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h14l-3-3M20 16H6l3 3"/></svg>',people:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 19c0-3 2.7-5 6-5s6 2 6 5"/><circle cx="17" cy="9" r="2.3"/><path d="M16 14.2c2.8.3 5 2 5 4.8"/></svg>',rate:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M4 7h6M4 11h6M17 4l-3 6h6l-3 6M14 20h6"/></svg>',spark:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></svg>',box:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7l8-4 8 4v10l-8 4-8-4z"/><path d="M4 7l8 4 8-4M12 11v10"/></svg>',map:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg>'};
+const ht=(ic,t)=>`<span class="ht"><i>${HI[ic]||I[ic]}</i>${t}</span>`;
+/* ---------- demo data (fake, for the preview) ---------- */
+function demo(){
+ const m=[{id:'m1',name:'我',color:COLORS[0]},{id:'m2',name:'小美',color:COLORS[1]},{id:'m3',name:'阿傑',color:COLORS[2]}];
+ const it=(ja,zh,note,qty,price,tax,who)=>({id:uid(),ja,zh,note,qty,price,tax,who});
+ const t={id:'t1',name:'2026 東京・大阪',start:'2026-12-03',end:'2026-12-09',members:m,repaid:[],
+  rate:{auto:0.2014,updated:'2026-11-22',manual:null},
+  receipts:[
+  {id:'r1',storeJa:'マツモトキヨシ 新宿東口店',store:'松本清 新宿東口店',date:'2026-12-04',time:'14:32',payers:[{m:'m1',amt:8866}],adjust:[],total:8866,taxFree:'yes',claimed:false,photos:2,
+   items:[it('キュレル 泡洗顔料 150ml','珂潤 泡沫洗面乳 150ml','',1,1980,10,['m2']),
+   it('ロイヒつぼ膏 156枚','樂衣喜 穴位貼布 156 片','鎮痛貼布（類似撒隆巴斯）',1,1078,10,['m1']),
+   it('龍角散ダイレクト ミント 16包','龍角散 免水喉糖粉 薄荷 16 包','',1,770,10,['m1','m2','m3']),
+   it('ビオレUV アクアリッチ','Bioré 水感防曬精華','',1,1078,10,['m2']),
+   it('メラノCC 美容液','Melano CC 維他命 C 美容液','',1,1320,10,['m3']),
+   it('太田胃散 分包 48包','太田胃散 分包 48 包','腸胃藥',1,2640,10,['m1'])]},
+  {id:'r2',storeJa:'セブン-イレブン 渋谷道玄坂店',store:'7-ELEVEN 澀谷道玄坂店',date:'2026-12-04',time:'09:05',payers:[{m:'m2',amt:722}],adjust:[],total:722,taxFree:'no',claimed:false,photos:1,
+   items:[it('おにぎり 鮭','鮭魚飯糰','',1,168,8,['m1']),
+   it('ツナマヨ','鮪魚美乃滋飯糰','',1,151,8,['m2']),
+   it('午後の紅茶 ミルクティー','午後紅茶 奶茶','',1,162,8,['m3']),
+   it('からあげクン レギュラー','唐揚君 原味炸雞塊','超商熱食',1,238,8,['m1','m2','m3']),
+   it('レジ袋','購物袋','',1,3,10,['m2'])]},
+  {id:'r3',storeJa:'一蘭 渋谷店',store:'一蘭拉麵 澀谷店',date:'2026-12-04',time:'19:48',payers:[{m:'m1',amt:2000},{m:'m3',amt:1700}],adjust:[],total:3700,taxFree:'no',claimed:false,photos:1,
+   items:[it('天然とんこつラーメン ×3','天然豚骨拉麵 ×3','',3,2940,10,['m1','m2','m3']),
+   it('替玉 ×2','加麵 ×2','',2,420,10,['m1','m3']),
+   it('半熟塩ゆでたまご','半熟鹽味溏心蛋','',1,340,10,['m2'])]},
+  {id:'r4',storeJa:'ドン・キホーテ 道頓堀店',store:'唐吉訶德 道頓堀店',date:'2026-12-06',time:'21:17',payers:[{m:'m3',amt:7966}],adjust:[{label:'折價券（クーポン値引）',amt:-500,item:null}],total:7966,taxFree:'yes',claimed:false,photos:3,
+   items:[it('じゃがりこ サラダ 6個パック','Jagariko 沙拉口味 6 入','',1,1078,8,['m2']),
+   it('キットカット 抹茶 大袋','KitKat 抹茶 大包裝','',1,1280,8,['m1','m2','m3']),
+   it('白い恋人 18枚','白色戀人 18 片','',1,1890,8,['m3']),
+   it('象印 ステンレスマグ 0.48L','象印 不鏽鋼保溫杯 0.48L','',1,3580,10,['m1']),
+   it('ハンドクリーム 桜','護手霜 櫻花','',1,638,10,[])]},
+  {id:'r5',storeJa:'タクシー',store:'計程車（飯店 → 新宿）',date:'2026-12-05',time:'22:40',payers:[{m:'m1',amt:2860}],adjust:[],total:2860,taxFree:'no',claimed:false,photos:0,manual:true,
+   items:[it('タクシー','計程車','',1,2860,10,['m1','m2','m3'])]}
+  ]};
+ return {cur:'t1',trips:[t],settings:{key:'',model:'gemini-3.8-flash'},v:1};
+}
+function load(){try{const s=localStorage.getItem(KEY);return s?JSON.parse(s):null}catch(e){return null}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+const fixTotal=r=>{r.total=Math.max(0,r.items.reduce((a,i)=>a+(+i.price||0),0)+r.adjust.reduce((a,x)=>a+x.amt,0));if(r.payers.length===1)r.payers[0].amt=r.total;return r};
+let S=load()||demo();
+const migrate=()=>{S.settings=Object.assign({key:'',model:'gemini-3.8-flash',cur:'JPY'},S.settings||{});S.trips.forEach(t=>t.receipts.forEach(r=>{if(r.printed===undefined)r.printed=r.manual?null:r.total;fixTotal(r)}))};migrate();
+const ui={view:'home',cur:(S.settings&&S.settings.cur)||'JPY',draft:null,photos:[],back:'home',from:null};
+const trip=()=>S.trips.find(t=>t.id===S.cur)||S.trips[0];
+const rate=()=>{const r=trip().rate;return r.manual||r.auto||0.2};
+const mem=id=>trip().members.find(x=>x.id===id)||{name:'?',color:'#999'};
+const yen=n=>'¥'+Math.round(n).toLocaleString('en-US');
+const nt=n=>'NT$'+Math.round(n*rate()).toLocaleString('en-US');
+const money=n=>ui.cur==='JPY'?yen(n):nt(n);
+const alt=n=>ui.cur==='JPY'?'≈ '+nt(n):yen(n);
+const avl=m=>{const c=m.name.slice(0,1);const clash=(trip()?.members||[]).some(o=>o.id!==m.id&&o.name.slice(0,1)===c);return clash?m.name.slice(0,2):c};
+const av=(m,sz)=>{const l=avl(m);return `<span class="av" style="background:${m.color}${sz?`;width:${sz}px;height:${sz}px`:''}${l.length>1?';font-size:10px;letter-spacing:-.5px':''}">${esc(l)}</span>`};
+const fmtDate=d=>{const x=new Date(d+'T00:00');return `${x.getMonth()+1}/${x.getDate()}（${'日一二三四五六'[x.getDay()]}）`};
+
+/* ---------- the money logic ---------- */
+function spread(total,weights){ // integer split by weight, largest remainder
+ const W=weights.reduce((a,b)=>a+b,0);if(!W)return weights.map(()=>0);
+ const raw=weights.map(w=>w*total/W),out=raw.map(Math.floor);let left=total-out.reduce((a,b)=>a+b,0);
+ raw.map((r,i)=>[r-Math.floor(r),i]).sort((a,b)=>b[0]-a[0]).forEach(([,i])=>{if(left>0){out[i]++;left--}});
+ return out;
+}
+function mainPayer(r){return [...r.payers].sort((a,b)=>b.amt-a.amt)[0]?.m}
+const itemAdj=(r,it)=>r.adjust.filter(a=>a.item===it.id).reduce((s,a)=>s+a.amt,0);
+function allocate(r){
+ // 1) item-only discounts change that item's price; 2) whole-receipt coupons/charges are spread by each item's (net) amount
+ const eff=r.items.map(i=>Math.max(0,i.price+itemAdj(r,i)));
+ const adj=spread(r.total,eff);
+ const sh={},ref={},shEff={},pm=mainPayer(r);let unas=0,refund=0,pretax=0;
+ const give=(o,id,v)=>o[id]=(o[id]||0)+v;
+ const split=(o,v,who)=>{const base=Math.floor(v/who.length);who.forEach(w=>give(o,w,base));give(o,pm,v-base*who.length)};
+ r.items.forEach((it,k)=>{
+  const a=adj[k],who=it.who.length?it.who:[pm];if(!it.who.length)unas++;
+  split(sh,a,who);split(shEff,eff[k],who);
+  const tx=Math.round(a*it.tax/(100+it.tax));pretax+=a-tx;
+  if(r.taxFree==='yes'){refund+=tx;split(ref,tx,who)}
+ });
+ const disc={};for(const k in shEff)disc[k]=shEff[k]-(sh[k]||0);
+ return {adj,eff,sh,ref,disc,unas,refund,pretax,pm};
+}
+function calc(t){
+ const paid={},owed={};t.members.forEach(m=>{paid[m.id]=0;owed[m.id]=0});
+ let total=0,unas=0,refEst=0,refGot=0,tf=0;
+ t.receipts.forEach(r=>{
+  const a=allocate(r);total+=r.total;unas+=a.unas;
+  r.payers.forEach(p=>paid[p.m]=(paid[p.m]||0)+p.amt);
+  for(const k in a.sh)owed[k]=(owed[k]||0)+a.sh[k];
+  if(r.taxFree==='yes'){tf++;refEst+=a.refund;if(r.claimed){refGot+=a.refund;paid[a.pm]-=a.refund;for(const k in a.ref)owed[k]-=a.ref[k]}}
+ });
+ const net={};t.members.forEach(m=>net[m.id]=paid[m.id]-owed[m.id]);
+ t.repaid.forEach(p=>{net[p.from]+=p.amt;net[p.to]-=p.amt});
+ const cr=[],db=[];for(const k in net){if(net[k]>0)cr.push([k,net[k]]);else if(net[k]<0)db.push([k,-net[k]])}
+ cr.sort((a,b)=>b[1]-a[1]);db.sort((a,b)=>b[1]-a[1]);
+ const xf=[];let i=0,j=0;
+ while(i<db.length&&j<cr.length){const v=Math.min(db[i][1],cr[j][1]);if(v>0)xf.push({from:db[i][0],to:cr[j][0],amt:v});db[i][1]-=v;cr[j][1]-=v;if(!db[i][1])i++;if(!cr[j][1])j++}
+ return {paid,owed,net,total,unas,refEst,refGot,tf,xf};
+}
+
+/* ---------- views ---------- */
+function go(v){ui.view=v;render();window.scrollTo(0,0)}
+function render(){
+ document.body.classList.toggle('focus',ui.view==='scan'||ui.view==='receipt');
+ $('#nav-home').classList.toggle('on',ui.view==='home');
+ $('#nav-settings').classList.toggle('on',ui.view==='settings');
+ app.innerHTML=({home,scan,receipt,tax,settings}[ui.view]||home)();
+}
+function home(){
+ const t=trip(),c=calc(t);
+ const days={};[...t.receipts].sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time)).forEach(r=>(days[r.date]=days[r.date]||[]).push(r));
+ return `
+ <div class="top"><img src="${ICON}" alt=""><div class="t">
+  <button id="tripSw" style="text-align:left"><h1><span>${esc(t.name)}</span>${I.down}</h1></button>
+  <small>${t.start.slice(5).replace('-','/')} – ${t.end.slice(5).replace('-','/')}・${t.members.length} 人</small></div>
+  <div class="seg" role="group" aria-label="顯示幣別"><button data-cur="JPY" class="${ui.cur==='JPY'?'on':''}">¥ 日圓</button><button data-cur="TWD" class="${ui.cur==='TWD'?'on':''}">NT$</button></div></div>
+ <section class="hero"><div class="lbl">這趟旅程總花費</div><div class="big">${money(c.total)}</div>
+  <div class="sub">${alt(c.total)}・匯率 1 円 ≈ NT$${rate().toFixed(4)}</div>
+  <div class="row"><span class="pill">${t.receipts.length} 張收據</span>${c.tf?`<span class="pill">可退稅預估 ${money(c.refEst)}</span>`:''}${c.unas?`<span class="pill" style="background:rgba(245,165,36,.35)">${c.unas} 個品項未分配</span>`:''}</div></section>
+ <section class="card"><h2>${ht('swap','誰該給誰')} <button class="btn sm soft" data-act="shareImg">產生結算圖片</button></h2>
+  ${c.xf.length?c.xf.map((x,i)=>`<div class="xfer"><div class="who">${av(mem(x.from))}<b>${esc(mem(x.from).name)}</b><span class="muted">${I.arrow}</span>${av(mem(x.to))}<b>${esc(mem(x.to).name)}</b></div>
+   <div style="text-align:right"><div class="amt">${money(x.amt)}</div><button class="btn sm ghost" data-repay="${i}" style="margin-top:4px">標記已還</button></div></div>`).join(''):`<p class="muted small" style="margin:0">大家已經打平，沒有人欠錢。</p>`}
+  ${t.repaid.length?`<details style="margin-top:10px"><summary class="small muted">已還款紀錄（${t.repaid.length}）</summary>${t.repaid.map((p,i)=>`<div class="setrow"><div class="f small">${esc(mem(p.from).name)} 已還 ${esc(mem(p.to).name)} ${money(p.amt)}${p.date?`<small>${p.date.slice(5).replace('-','/')}</small>`:''}</div><button class="btn sm ghost" data-unrepay="${i}">復原</button></div>`).join('')}</details>`:''}
+ </section>
+ <section class="card"><h2>${ht('people','每個人的帳')} <small>${ui.cur==='JPY'?'日圓':'新台幣'}</small></h2>
+  <table class="ptable"><thead><tr><th>成員</th><th>已付</th><th>應負擔</th><th>差額</th></tr></thead><tbody>
+  ${t.members.map(m=>{const n=c.paid[m.id]-c.owed[m.id];return `<tr><td><span class="nm">${av(m,26)}${esc(m.name)}</span></td><td>${money(c.paid[m.id])}</td><td>${money(c.owed[m.id])}</td><td class="${n>0?'pos':n<0?'neg':''}"><b>${n>0?'+':''}${n<0?'−':''}${money(Math.abs(n))}</b></td></tr>`}).join('')}
+  </tbody></table><p class="small muted" style="margin:8px 0 0">差額 + 是別人要還你，− 是你要付給別人（尚未扣掉已還款）。</p></section>
+ ${c.tf?`<button class="card" data-go="tax" style="display:flex;gap:12px;align-items:center;width:100%;text-align:left"><span class="tile" style="background:var(--ok-soft);color:var(--ok)">${I.tax}</span><span style="flex:1"><b>退稅</b><span class="small muted" style="display:block">${c.tf} 張收據可退・預估 ${money(c.refEst)}${c.refGot?`・已領 ${money(c.refGot)}`:''}</span></span>${I.arrow}</button>`:''}
+ <section class="card"><h2>${ht('rcpt','收據')} <button class="btn sm ghost" data-act="manual">${I.plus}手動記一筆</button></h2>
+  ${Object.keys(days).length?Object.entries(days).map(([d,rs])=>`<div class="day">${fmtDate(d)}</div>`+rs.map(r=>{const a=allocate(r);return `<button class="rc" data-open="${r.id}"><span class="tile">${I.rcpt}</span><span class="mid"><b>${esc(r.store)}</b><span>${esc(r.storeJa)}・${r.time}・${r.payers.map(p=>esc(mem(p.m).name)).join('＋')} 付</span></span><span class="rt"><b>${money(r.total)}</b>${r.taxFree==='yes'?`<span class="tag ok">${r.claimed?'已退稅':'可退稅'}</span>`:r.taxFree==='maybe'?'<span class="tag warn">可能可退</span>':''} ${a.unas?`<span class="tag warn">${a.unas} 項未分配</span>`:''}</span></button>`}).join('')).join(''):`<div class="empty">${I.rcpt}<div>還沒有收據，按下方的掃描開始。</div></div>`}
+ </section>
+ <p class="demo">試看版：目前畫面上是示範用的假資料，可以到「設定」清除。</p>`;
+}
+function scan(){
+ const n=ui.photos.length;
+ return `<div class="hdr"><button class="icb" data-go="home" aria-label="關閉">${I.close}</button><h1>掃描收據</h1><span class="icb"></span></div>
+ <div class="note info">${I.info}<div>收據太長時可以<b>分段拍</b>：從上到下一段一段拍，每段和上一段稍微重疊一點。全部拍完再按「開始分析」，會合在一起讀成一張收據。</div></div>
+ ${n?`<div class="shots">${ui.photos.map((p,i)=>`<div class="shot"><img src="${p.url}" alt="第 ${i+1} 段"><span class="n">${i+1}</span><button class="x" data-delshot="${i}" aria-label="刪除第 ${i+1} 段">${I.close}</button></div>`).join('')}
+  <label class="addshot" for="camIn">${I.cam}拍下一段</label></div>`:`<div class="empty" style="padding:36px 16px"><label for="camIn" style="cursor:pointer;display:block">${I.cam}<div style="font-weight:700;color:var(--ink);margin-top:4px">拍第一段</div><div class="small">對準收據最上方的店名開始</div></label></div>`}
+ <div style="display:flex;gap:10px;margin:14px 0"><label class="btn ghost" for="libIn" style="flex:1">${I.img}從相簿選</label><button class="btn ghost" style="flex:1" data-act="manual">${I.plus}手動記一筆</button></div>
+ <div class="sticky"><button class="btn pri block" data-act="analyze" ${n?'':'disabled'}>開始分析${n?`（${n} 張）`:''}</button></div>`;
+}
+function receipt(){
+ const r=ui.draft,t=trip(),a=allocate(r);
+ fixTotal(r);const isum=r.items.reduce((s,i)=>s+i.price,0),hasP=r.printed!=null&&r.printed!=='',diff=hasP?r.total-r.printed:0;
+ const multi=r.payers.length>1||r._multi,cmp=t.members.length>3;
+ const pay=r.payers.reduce((s,p)=>s+(+p.amt||0),0);
+ return `<div class="hdr"><button class="icb" data-act="cancel" aria-label="返回">${I.back}</button><h1>${r._new?'確認收據':'收據明細'}</h1><span class="icb"></span></div>
+ ${r._demo?`<div class="note warn">${I.info}<div>這是<b>示範結果</b>：試看版還沒接上 AI，所以不管拍什麼都會顯示這張假收據。第 3 步會換成真正的辨識。</div></div>`:''}
+ <section class="card">
+  <div class="row2"><label class="field"><span>店名（中文）</span><input class="inp" data-f="store" value="${esc(r.store)}"></label><label class="field"><span>日期</span><input class="inp" type="date" data-f="date" value="${r.date}"></label></div>
+  <label class="field" style="margin-bottom:4px"><span>日文原文</span><input class="inp" data-f="storeJa" value="${esc(r.storeJa)}"></label>
+ </section>
+ <section class="card"><h2>${ht('wallet','誰付錢')}</h2>
+  ${multi?`<div class="paybox">${t.members.map(m=>{const p=r.payers.find(x=>x.m===m.id);return `${av(m)}<span>${esc(m.name)}</span><input class="inp" inputmode="numeric" data-pay="${m.id}" value="${p?p.amt:''}" placeholder="0">`}).join('')}</div>
+   <p class="small ${pay===r.total?'okc':'neg'}" style="margin:10px 0 0">${pay===r.total?'金額已對上收據合計':`加起來 ${yen(pay)}，跟收據合計還差 ${yen(r.total-pay)}`}</p>`
+  :`<div class="chips">${t.members.map(m=>`<button class="chip ${r.payers[0]?.m===m.id?'on':''}" data-payer="${m.id}">${av(m)}${esc(m.name)}</button>`).join('')}</div>`}
+  <div class="toggle" style="margin-top:8px"><span class="small">多人一起出錢（例如湊錢）</span><label class="sw"><input type="checkbox" data-act="multi" ${multi?'checked':''}><i></i></label></div>
+ </section>
+ <section class="card"><h2>${ht('list','品項')} <small>點人頭勾選，選多人＝平分</small></h2>
+  ${cmp?`<div class="small muted" style="display:flex;flex-wrap:wrap;gap:4px 12px;margin-bottom:10px">${t.members.map(m=>`<span style="display:inline-flex;align-items:center;gap:4px">${av(m,22)}${esc(m.name)}</span>`).join('')}</div>`:''}
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button class="btn sm soft" data-act="allSplit">全部平分</button><button class="btn sm ghost" data-act="restTo">未分配的都給…</button></div>
+  ${r.items.map((it,k)=>`<div class="item"><div class="it-top"><button class="it-name" data-edit="${k}"><b>${esc(it.zh||'（未命名）')} <span class="muted">${I.edit}</span></b><small>${esc(it.ja)}${it.tax===8?'・8%':''}</small>${it.note?`<em>${esc(it.note)}</em>`:''}</button>
+   <div class="it-amt">${itemAdj(r,it)?`<small style="text-decoration:line-through">${yen(it.price)}</small><b>${yen(a.eff[k])}</b>`:`<b>${yen(it.price)}</b>`}<small>≈ ${nt(a.eff[k])}</small></div></div>
+   <div class="chips ${it.who.length?'':'unas'}">${t.members.map(m=>`<button class="chip ${cmp?'ic':''} ${it.who.includes(m.id)?'on':''}" data-who="${k}:${m.id}" aria-label="${esc(m.name)}" title="${esc(m.name)}">${av(m)}<span class="cn">${esc(m.name)}</span></button>`).join('')}<button class="chip txt ${it.who.length===t.members.length?'on':''}" data-whoall="${k}">全員</button></div>
+   ${it.who.length>1?`<div class="small muted" style="margin-top:6px">${it.who.length} 人平分，每人約 ${yen(a.adj[k]/it.who.length)}</div>`:''}</div>`).join('')}
+  <button class="btn ghost block" data-act="addItem" style="margin-top:8px">${I.plus}新增品項</button>
+ </section>
+ <section class="card"><h2>${ht('calc','金額核對')}</h2><div class="sum">
+  <span>品項加總</span><span class="r">${yen(isum)}</span>
+  ${r.adjust.map((x,i)=>{const it=x.item&&r.items.find(y=>y.id===x.item);return `<span class="adjl"><button class="delx" data-deladj="${i}" aria-label="刪除 ${esc(x.label)}">${I.close}</button><span>${esc(x.label)}<small class="muted" style="display:block;font-size:12px">${it?'只算在「'+esc(it.zh)+'」':'整張收據，依每人金額比例分攤'}</small></span></span><span class="r ${x.amt<0?'okc':''}">${x.amt<0?'−':'+'}${yen(Math.abs(x.amt))}</span>`}).join('')}
+  <span style="grid-column:1/-1"><button class="btn sm ghost" data-act="addAdj">${I.plus}折價券／折扣／服務費</button></span>
+  <span class="tot">這張收據合計</span><span class="r tot">${yen(r.total)}</span>
+ </div>
+ <div class="setrow" style="border-top:1px solid var(--line);margin-top:10px"><span class="f small">紙本收據上印的合計<small>${r.manual?'選填：填上可以幫你核對有沒有漏記':'用來核對 AI 有沒有漏讀'}</small></span><input class="inp" inputmode="numeric" data-f="printed" value="${hasP?r.printed:''}" placeholder="—" style="width:120px;text-align:right;min-height:38px;padding:6px 10px"></div>
+ ${hasP?`<div class="note ${diff?'warn':'ok'}" style="margin:10px 0 0">${I.info}<div>${diff?`和紙本合計<b>${diff>0?'多了':'少了'} ${yen(Math.abs(diff))}</b>。可能有品項漏記、讀錯，或少了折扣。對照紙本修正品項；如果確定只是零頭差異，可以<button class="btn sm ghost" data-act="fixDiff" style="margin-top:6px">把差額記成「其他調整」</button>`:'和紙本合計對上了。'}</div></div>`:''}
+ ${r.adjust.some(x=>!x.item)&&Object.values(a.disc).some(v=>v)?`<div class="small" style="margin-top:10px"><div class="muted" style="margin-bottom:4px">整張的折扣／加收，每個人分到：</div><div class="chips">${t.members.filter(m=>a.disc[m.id]).map(m=>`<span class="chip plain">${av(m)}${esc(m.name)} ${a.disc[m.id]>0?'−':'+'}${yen(Math.abs(a.disc[m.id]))}</span>`).join('')}</div></div>`:''}</section>
+ <section class="card"><h2>${ht('tax','退稅')}</h2>
+  <div class="seg" role="group" style="margin-bottom:8px">${[['yes','可退稅'],['maybe','可能可退'],['no','不適用']].map(([v,l])=>`<button data-tf="${v}" class="${r.taxFree===v?'on':''}">${l}</button>`).join('')}</div>
+  <p class="small muted" style="margin:0">未稅金額 ${yen(a.pretax)}（門檻 ¥5,000）${r.taxFree==='yes'?`・預估可退 <b class="okc">${yen(a.refund)}</b>`:''}${r.taxFree==='maybe'?'・金額有達標，但看不出是否辦了免稅手續，請確認結帳時有沒有出示護照。':''}</p>
+ </section>
+ <div class="sticky">${r._new?'':`<button class="btn danger" data-act="delRcpt">刪除</button>`}<button class="btn pri block" style="flex:1" data-act="saveRcpt">${r._new?'存進帳本':'儲存'}</button></div>`;
+}
+function tax(){
+ const t=trip(),rs=t.receipts.filter(r=>r.taxFree!=='no'),c=calc(t);
+ return `<div class="hdr"><button class="icb" data-go="home" aria-label="返回">${I.back}</button><h1>退稅</h1><span class="icb"></span></div>
+ <section class="card" style="display:flex;gap:16px;align-items:center"><span class="tile" style="background:var(--ok-soft);color:var(--ok);width:52px;height:52px">${I.tax}</span><div><div class="small muted">預估可退稅總額</div><div style="font-size:28px;font-weight:700">${money(c.refEst)}</div><div class="small muted">${alt(c.refEst)}・已領 ${money(c.refGot)}</div></div></section>
+ <div class="note info">${I.info}<div>2026/11/1 起的新制：結帳先付含稅價，出境時再退。<b>同一筆購買的東西出境時要全部帶在身上</b>，少一件整筆都不能退；消耗品出境前不能拆開；購買後 90 天內要出境。</div></div>
+ ${rs.map(r=>{const a=allocate(r),others=[...new Set(r.items.flatMap(i=>i.who))].filter(w=>w!==a.pm);return `<section class="card">
+  <h2><span>${esc(r.store)}<small style="display:block">${fmtDate(r.date)}・${esc(mem(a.pm).name)} 付款・未稅 ${yen(a.pretax)}</small></span>${r.taxFree==='yes'?`<span class="okc" style="white-space:nowrap">退 ${yen(a.refund)}</span>`:'<span class="tag warn">待確認</span>'}</h2>
+  ${others.length?`<div class="note warn" style="margin-bottom:10px">${I.info}<div>這筆裡有 ${others.map(o=>esc(mem(o).name)).join('、')} 的東西，出境時要跟 ${esc(mem(a.pm).name)} 一起帶上，否則整筆不能退。</div></div>`:''}
+  <div class="small muted" style="margin-bottom:2px">出境時要帶在身上的物品：</div>
+  ${r.items.map((it,k)=>`<label class="chk"><input type="checkbox" data-carry="${r.id}:${k}" ${it.carry?'checked':''}><span class="f">${esc(it.zh)}<small>${esc(it.ja)}・${it.who.map(w=>esc(mem(w).name)).join('、')||'未分配'}</small></span></label>`).join('')}
+  ${r.taxFree==='yes'?`<div class="toggle" style="border-top:1px solid var(--line);margin-top:6px"><span>已領到退稅<small class="muted" style="display:block;font-size:12px">打開後，退稅金會依品項退回給負責的人</small></span><label class="sw"><input type="checkbox" data-claim="${r.id}" ${r.claimed?'checked':''}><i></i></label></div>`:''}
+ </section>`}).join('')||'<div class="empty">目前沒有可退稅的收據。</div>'}
+ <section class="card"><h2>${ht('plane','出境時怎麼退')}</h2><ol class="list small" style="margin:0;padding-left:20px">
+  <li>到機場報到<b>之前</b>，先到出境大廳的海關機台，或用 Visit Japan Web 辦理。</li>
+  <li>顯示<b>綠色</b>：直接去報到。顯示<b>紅色</b>：帶著物品去海關檢查。</li>
+  <li>完成後，依照每家店提供的方式領取退稅金（金額以店家或退稅公司為準，可能扣手續費）。</li>
+  <li>領到後回來這頁打開「已領到退稅」。</li></ol></section>`;
+}
+function settings(){
+ const t=trip(),r=t.rate;
+ return `<div class="hdr"><span class="icb"></span><h1>設定</h1><span class="icb"></span></div>
+ <section class="card"><h2>${ht('map','這趟旅程')}</h2>
+  <label class="field"><span>旅程名稱</span><input class="inp" id="tName" value="${esc(t.name)}"></label>
+  <div class="row2"><label class="field"><span>開始</span><input class="inp" type="date" id="tStart" value="${t.start}"></label><label class="field"><span>結束</span><input class="inp" type="date" id="tEnd" value="${t.end}"></label></div>
+  <div class="small muted" style="margin-bottom:4px">成員</div>
+  ${t.members.map(m=>`<div class="setrow">${av(m)}<span class="f">${esc(m.name)}</span><button class="btn sm ghost" data-renmem="${m.id}">改名</button><button class="btn sm ghost" data-rmmem="${m.id}">移除</button></div>`).join('')}
+  <div style="display:flex;gap:8px;margin-top:8px"><input class="inp" id="newMem" placeholder="新成員名字"><button class="btn soft" data-act="addMem">加入</button></div>
+ </section>
+ <section class="card"><h2>${ht('rate','匯率')}</h2>
+  <div class="setrow"><span class="f">自動匯率<small>每天更新・上次 ${esc(r.updated||'—')}</small></span><b>1 円 ≈ NT$${(r.auto||0).toFixed(4)}</b></div>
+  <div class="toggle"><span>改用我自己輸入的匯率<small class="muted" style="display:block;font-size:12px">例如照信用卡帳單的實際匯率</small></span><label class="sw"><input type="checkbox" data-act="manualRate" ${r.manual?'checked':''}><i></i></label></div>
+  ${r.manual?`<label class="field"><span>1 日圓 = 多少新台幣</span><input class="inp" id="mRate" inputmode="decimal" value="${r.manual}"></label>`:''}
+ </section>
+ <section class="card"><h2>${ht('spark','AI 辨識（第 3 步啟用）')}</h2>
+  <label class="field"><span>Gemini 金鑰（只存在這支手機）</span><input class="inp" id="gKey" type="password" autocomplete="off" placeholder="AIza…" value="${esc(S.settings.key)}"></label>
+  <label class="field"><span>使用的模型</span><select class="inp" id="gModel">${[['gemini-3.8-flash','Gemini 3.8 Flash（較準，每天約 20 次）'],['gemini-3.5-flash-lite','Gemini 3.5 Flash-Lite（每天約 500 次）']].map(([v,l])=>`<option value="${v}" ${S.settings.model===v?'selected':''}>${l}</option>`).join('')}</select></label>
+  <button class="btn ghost block" data-act="testKey">測試連線</button>
+ </section>
+ <section class="card"><h2>${ht('box','資料')}</h2>
+  <div class="setrow"><span class="f">旅程<small>目前：${esc(t.name)}・共 ${S.trips.length} 個</small></span><button class="btn sm ghost" id="tripSw2">切換／新增</button></div>
+  <div class="setrow"><span class="f">備份<small>複製全部資料，貼到備忘錄保存</small></span><button class="btn sm ghost" data-act="export">複製備份</button></div>
+  <div class="setrow"><span class="f">還原<small>貼上之前複製的備份</small></span><button class="btn sm ghost" data-act="import">貼上還原</button></div>
+  <div class="setrow"><span class="f">清除示範資料<small>刪掉假收據，保留旅程和成員</small></span><button class="btn sm danger" data-act="clearDemo">清除</button></div>
+  <div class="setrow"><span class="f">刪除這趟旅程<small>連同所有收據一起刪除</small></span><button class="btn sm danger" data-act="delTrip">刪除</button></div>
+  <div class="setrow"><span class="f">重設成示範資料</span><button class="btn sm ghost" data-act="resetDemo">重設</button></div>
+ </section>
+ <p class="demo">JaScan 試看版 0.1</p>`;
+}
+
+/* ---------- sheets, toast ---------- */
+function sheet(html,bind){
+ const s=document.createElement('div');s.className='scrim';s.innerHTML=`<div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>${html}</div>`;
+ s.addEventListener('click',e=>{if(e.target===s||e.target.closest('[data-x]'))s.remove()});
+ document.body.appendChild(s);bind&&bind(s,()=>s.remove());
+}
+function ask(msg,okLabel,fn){sheet(`<h3>${msg}</h3><div style="display:flex;gap:10px"><button class="btn ghost" style="flex:1" data-x>取消</button><button class="btn pri" style="flex:1" id="okb">${okLabel}</button></div>`,(s,c)=>s.querySelector('#okb').onclick=()=>{c();fn()})}
+let tt;function toast(m){document.querySelector('.toast')?.remove();const d=document.createElement('div');d.className='toast';d.textContent=m;document.body.appendChild(d);clearTimeout(tt);tt=setTimeout(()=>d.remove(),2600)}
+function tripSheet(){
+ sheet(`<h3>切換旅程</h3>${S.trips.map(t=>`<button class="setrow" style="width:100%;text-align:left" data-pick="${t.id}"><span class="f"><b>${esc(t.name)}</b><small>${t.members.map(m=>esc(m.name)).join('、')}・${t.receipts.length} 張收據</small></span>${t.id===S.cur?'<span class="okc">目前</span>':''}</button>`).join('')}
+ <h3 style="margin-top:18px">新增旅程</h3><label class="field"><span>名稱</span><input class="inp" id="ntN" placeholder="例如：2027 北海道"></label>
+ <label class="field"><span>成員（用逗號或空白分開，第一位是你）</span><input class="inp" id="ntM" value="我"></label>
+ <div class="row2"><label class="field"><span>開始</span><input class="inp" type="date" id="ntS"></label><label class="field"><span>結束</span><input class="inp" type="date" id="ntE"></label></div>
+ <button class="btn pri block" id="ntGo">建立</button>`,(s,c)=>{
+  s.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{S.cur=b.dataset.pick;save();c();go('home')});
+  s.querySelector('#ntGo').onclick=()=>{const n=s.querySelector('#ntN').value.trim();const ms=s.querySelector('#ntM').value.split(/[,，、\s]+/).filter(Boolean);
+   if(!n||!ms.length){toast('請填旅程名稱和至少一位成員');return}
+   const today=new Date().toISOString().slice(0,10);
+   const t={id:uid(),name:n,start:s.querySelector('#ntS').value||today,end:s.querySelector('#ntE').value||today,members:ms.map((x,i)=>({id:uid(),name:x,color:COLORS[i%COLORS.length]})),receipts:[],repaid:[],rate:clone(trip().rate)};
+   S.trips.push(t);S.cur=t.id;save();c();go('home');toast('已建立「'+n+'」')}});
+}
+function itemSheet(k){
+ const r=ui.draft,it=r.items[k];
+ sheet(`<h3>編輯品項</h3><label class="field"><span>中文名稱</span><input class="inp" id="eZh" value="${esc(it.zh)}"></label>
+ <label class="field"><span>日文原文</span><input class="inp" id="eJa" value="${esc(it.ja)}"></label>
+ <label class="field"><span>說明（選填）</span><input class="inp" id="eNote" value="${esc(it.note)}"></label>
+ <div class="row2"><label class="field"><span>金額（日圓，含數量）</span><input class="inp" id="eP" inputmode="numeric" value="${it.price}"></label>
+ <label class="field"><span>稅率</span><select class="inp" id="eT"><option value="10" ${it.tax===10?'selected':''}>10%（一般）</option><option value="8" ${it.tax===8?'selected':''}>8%（食品飲料）</option></select></label></div>
+ <div style="display:flex;gap:10px"><button class="btn danger" id="eDel">刪除品項</button><button class="btn pri" style="flex:1" id="eOk">完成</button></div>`,(s,c)=>{
+  s.querySelector('#eOk').onclick=()=>{it.zh=s.querySelector('#eZh').value.trim();it.ja=s.querySelector('#eJa').value.trim();it.note=s.querySelector('#eNote').value.trim();it.price=parseInt(s.querySelector('#eP').value.replace(/\D/g,''))||0;it.tax=+s.querySelector('#eT').value;syncManual();c();render()};
+  s.querySelector('#eDel').onclick=()=>{r.adjust=r.adjust.filter(x=>x.item!==it.id);r.items.splice(k,1);syncManual();c();render()};
+ });
+}
+function syncManual(r=ui.draft){fixTotal(r)}
+function openReceipt(r,isNew){ui.draft=clone(r);ui.draft._new=!!isNew;ui.from=ui.view;go('receipt')}
+function newDraft(manual){
+ const t=trip(),today=new Date().toISOString().slice(0,10);
+ return {id:uid(),storeJa:'',store:'',date:today,time:new Date().toTimeString().slice(0,5),payers:[{m:t.members[0].id,amt:0}],adjust:[],total:0,printed:null,taxFree:'no',claimed:false,photos:0,manual,
+  items:[{id:uid(),ja:'',zh:'',note:'',qty:1,price:0,tax:10,who:t.members.map(m=>m.id)}]};
+}
+function demoScan(){
+ const t=trip(),r=newDraft(false),me=t.members[0].id;
+ Object.assign(r,{printed:1386,storeJa:'ローソン 心斎橋筋店',store:'LAWSON 心齋橋筋店',time:'23:12',photos:ui.photos.length,manual:false,total:1386,payers:[{m:me,amt:1386}],
+  items:[['プレミアムロールケーキ','頂級瑞士捲','LAWSON 招牌甜點',1,216,8],['からあげクン','唐揚君 炸雞塊','',1,238,8],['ザ・チキン ゆず胡椒','炸雞腿 柚子胡椒風味','',1,248,8],['ほろよい 白いサワー','HOROYOI 微醺 乳酸沙瓦','低酒精飲料',2,316,10],['ポカリスエット 500ml','寶礦力水得 500ml','',1,165,8],['ウコンの力','薑黃之力','解酒飲料',1,203,8]].map(([ja,zh,note,qty,price,tax])=>({id:uid(),ja,zh,note,qty,price,tax,who:[]}))});
+ r.items[1].who=t.members.map(m=>m.id);r._demo=true;return r;
+}
+
+/* ---------- settlement picture ---------- */
+function rr(x,X,Y,W,H,R){x.beginPath();x.moveTo(X+R,Y);x.arcTo(X+W,Y,X+W,Y+H,R);x.arcTo(X+W,Y+H,X,Y+H,R);x.arcTo(X,Y+H,X,Y,R);x.arcTo(X,Y,X+W,Y,R);x.closePath()}
+function drawSettle(){
+ const t=trip(),c=calc(t),F='-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif';
+ const W=1080,P=56,xf=c.xf,ms=t.members;
+ const xh=96+(xf.length?xf.length*112:110)+16,mh=100+ms.length*92+16,H=430+xh+40+mh+110;
+ const cv=document.createElement('canvas');cv.width=W;cv.height=H;const x=cv.getContext('2d');
+ x.fillStyle='#EDF0F5';x.fillRect(0,0,W,H);
+ const g=x.createLinearGradient(0,0,W,380);g.addColorStop(0,'#0A6AD6');g.addColorStop(1,'#0B2A5C');x.fillStyle=g;x.fillRect(0,0,W,380);
+ x.fillStyle='#EDF0F5';for(let i=0;i<W;i+=28){x.beginPath();x.arc(i+14,380,13,0,Math.PI*2);x.fill()}
+ x.fillStyle='#fff';x.font=`700 54px ${F}`;x.fillText(t.name,P,110);
+ x.globalAlpha=.85;x.font=`400 32px ${F}`;x.fillText(`${t.start.replace(/-/g,'/')} – ${t.end.slice(5).replace('-','/')}・${ms.length} 人・${t.receipts.length} 張收據`,P,162);
+ x.font=`400 30px ${F}`;x.fillText('總花費',P,236);x.globalAlpha=1;
+ x.font=`700 76px ${F}`;x.fillText(yen(c.total),P,318);const tw=x.measureText(yen(c.total)).width;
+ x.globalAlpha=.85;x.font=`400 34px ${F}`;x.fillText('≈ '+nt(c.total),P+tw+24,316);x.globalAlpha=1;
+ let y=430;
+ const card=(h)=>{x.fillStyle='#fff';rr(x,P-16,y,W-2*(P-16),h,28);x.fill()};
+ const avd=(m,cx,cy,r)=>{x.fillStyle=m.color;x.beginPath();x.arc(cx,cy,r,0,Math.PI*2);x.fill();x.fillStyle='#fff';const l=avl(m);x.font=`700 ${l.length>1?22:28}px ${F}`;x.textAlign='center';x.fillText(l,cx,cy+10);x.textAlign='left'};
+ card(xh);
+ x.fillStyle='#0F1B2D';x.font=`700 38px ${F}`;x.fillText('誰該給誰',P+20,y+64);y+=96;
+ if(!xf.length){x.fillStyle='#69768A';x.font=`400 32px ${F}`;x.fillText('大家已經打平，沒有人欠錢。',P+20,y+44);y+=110}
+ xf.forEach((f,i)=>{const a=mem(f.from),b=mem(f.to);if(i){x.fillStyle='#E5E9F0';x.fillRect(P+20,y,W-2*P-40,2)}
+  avd(a,P+50,y+56,30);x.fillStyle='#0F1B2D';x.font=`600 34px ${F}`;x.fillText(a.name,P+96,y+68);let ax=P+96+x.measureText(a.name).width+20;
+  x.fillStyle='#69768A';x.fillText('→',ax,y+68);ax+=54;avd(b,ax+30,y+56,30);x.fillStyle='#0F1B2D';x.font=`600 34px ${F}`;x.fillText(b.name,ax+76,y+68);
+  x.textAlign='right';x.font=`700 38px ${F}`;x.fillText(yen(f.amt),W-P-20,y+58);x.fillStyle='#69768A';x.font=`400 26px ${F}`;x.fillText('≈ '+nt(f.amt),W-P-20,y+94);x.textAlign='left';y+=112});
+ y=430+xh+40;card(mh);
+ x.fillStyle='#0F1B2D';x.font=`700 38px ${F}`;x.fillText('每個人的帳',P+20,y+64);
+ x.fillStyle='#69768A';x.font=`400 26px ${F}`;x.textAlign='right';[['已付',600],['應負擔',800],['差額',W-P-20]].forEach(([l,cx])=>x.fillText(l,cx,y+64));x.textAlign='left';y+=100;
+ ms.forEach(m=>{const n=c.paid[m.id]-c.owed[m.id];x.fillStyle='#E5E9F0';x.fillRect(P+20,y,W-2*P-40,2);avd(m,P+48,y+46,26);
+  x.fillStyle='#0F1B2D';x.font=`500 32px ${F}`;x.fillText(m.name,P+90,y+57);x.textAlign='right';x.fillText(yen(c.paid[m.id]),600,y+57);x.fillText(yen(c.owed[m.id]),800,y+57);
+  x.fillStyle=n>0?'#0A5FC2':n<0?'#D93D42':'#0F1B2D';x.font=`700 32px ${F}`;x.fillText((n>0?'+':n<0?'−':'')+yen(Math.abs(n)),W-P-20,y+57);x.textAlign='left';y+=92});
+ y=430+xh+40+mh+64;x.fillStyle='#69768A';x.font=`400 24px ${F}`;
+ x.fillText(`匯率 1 円 ≈ NT$${rate().toFixed(4)}${c.refGot?'・已扣除領回的退稅':''}${t.repaid.length?'・已扣除已還款':''}`,P,y);
+ x.textAlign='right';x.fillText('JaScan・'+new Date().toLocaleDateString('zh-TW'),W-P,y);x.textAlign='left';
+ return cv;
+}
+function shareImage(){
+ const cv=drawSettle(),url=cv.toDataURL('image/png');
+ sheet(`<h3>結算圖片</h3><img src="${url}" alt="結算圖片" style="width:100%;border-radius:14px;border:1px solid var(--line);display:block">
+ <p class="small muted">在 iPhone 上可以<b>長按圖片</b>，選「儲存到照片」或「分享」，再貼到 LINE 群組。</p>
+ <button class="btn pri block" id="shGo">分享…</button>`,(s,c)=>s.querySelector('#shGo').onclick=()=>{
+  cv.toBlob(async b=>{const f=new File([b],`${trip().name}-結算.png`,{type:'image/png'});
+   try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:trip().name+' 結算'});return}}catch(e){if(e.name==='AbortError')return}
+   try{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=f.name;document.body.appendChild(a);a.click();a.remove();toast('如果沒有下載，請長按圖片儲存')}catch(e){toast('請長按圖片儲存')}
+  },'image/png')});
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click',e=>{
+ const b=e.target.closest('button,[data-go]');if(!b)return;const d=b.dataset;const t=trip();
+ if(d.go){if(d.go==='scan'&&ui.view==='scan')return;go(d.go);return}
+ if(d.cur){ui.cur=d.cur;S.settings.cur=d.cur;save();render();return}
+ if(b.id==='tripSw'||b.id==='tripSw2'){tripSheet();return}
+ if(d.open){openReceipt(t.receipts.find(r=>r.id===d.open));return}
+ if(d.repay!==undefined){const x=calc(t).xf[+d.repay];
+  sheet(`<h3>${esc(mem(x.from).name)} 還給 ${esc(mem(x.to).name)}</h3><p class="muted small" style="margin-top:-6px">應還 ${yen(x.amt)}（${nt(x.amt)}）。只還一部分的話，改成實際金額。</p>
+  <div class="row2"><label class="field"><span>幣別</span><select class="inp" id="rpC"><option value="JPY">日圓</option><option value="TWD">新台幣</option></select></label><label class="field"><span>金額</span><input class="inp" id="rpV" inputmode="numeric" value="${x.amt}"></label></div>
+  <button class="btn pri block" id="rpOk">記錄還款</button>`,(s,c)=>{const cs=s.querySelector('#rpC'),vi=s.querySelector('#rpV');
+   cs.onchange=()=>{vi.value=cs.value==='TWD'?Math.round(x.amt*rate()):x.amt};
+   s.querySelector('#rpOk').onclick=()=>{let v=parseInt(vi.value.replace(/\D/g,''))||0;if(cs.value==='TWD')v=Math.round(v/rate());if(!v){toast('請輸入金額');return}
+    t.repaid.push({from:x.from,to:x.to,amt:Math.min(v,x.amt),date:new Date().toISOString().slice(0,10)});save();c();render();toast(v>=x.amt?'已記錄還款':'已記錄部分還款')}});return}
+ if(d.unrepay!==undefined){t.repaid.splice(+d.unrepay,1);save();render();return}
+ if(d.delshot!==undefined){URL.revokeObjectURL(ui.photos[+d.delshot].url);ui.photos.splice(+d.delshot,1);render();return}
+ const r=ui.draft;
+ if(d.payer){r.payers=[{m:d.payer,amt:r.total}];render();return}
+ if(d.who){const [k,m]=d.who.split(':');const w=r.items[+k].who;const i=w.indexOf(m);i<0?w.push(m):w.splice(i,1);render();return}
+ if(d.whoall!==undefined){const it=r.items[+d.whoall];it.who=it.who.length===t.members.length?[]:t.members.map(m=>m.id);render();return}
+ if(d.edit!==undefined){itemSheet(+d.edit);return}
+ if(d.deladj!==undefined){r.adjust.splice(+d.deladj,1);syncManual();render();return}
+ if(d.tf){r.taxFree=d.tf;render();return}
+ if(d.renmem){const m=mem(d.renmem);sheet(`<h3>改名</h3><input class="inp" id="rnV" value="${esc(m.name)}"><button class="btn pri block" id="rnOk" style="margin-top:12px">完成</button>`,(s,c)=>s.querySelector('#rnOk').onclick=()=>{const v=s.querySelector('#rnV').value.trim();if(v){m.name=v;save()}c();render()});return}
+ if(d.rmmem){const used=t.receipts.some(x=>x.payers.some(p=>p.m===d.rmmem)||x.items.some(i=>i.who.includes(d.rmmem)));
+  if(used){sheet(`<h3>還不能移除 ${esc(mem(d.rmmem).name)}</h3><p class="muted">他還有付過的收據或負責的品項。請先到那些收據把品項改給別人、付款人換人，再回來移除。</p><button class="btn pri block" data-x>知道了</button>`);return}
+  if(t.members.length<=1){toast('至少要有一位成員');return}
+  ask(`移除 ${esc(mem(d.rmmem).name)}？`,'移除',()=>{t.members=t.members.filter(m=>m.id!==d.rmmem);save();render()});return}
+ switch(d.act){
+  case 'manual':openReceipt(newDraft(true),true);break;
+  case 'analyze':{const L=document.createElement('div');L.className='loading';L.innerHTML=`<div class="rcpt"><i style="width:60%"></i><i></i><i style="width:80%"></i><i></i><i style="width:50%"></i><i></i><span class="beam"></span></div><b>正在讀取收據…</b><span class="muted small" id="lstep">合併 ${ui.photos.length} 段照片</span>`;document.body.appendChild(L);
+   const steps=['辨識日文文字','翻譯成中文','整理品項與金額','核對合計'];let i=0;const iv=setInterval(()=>{const s=document.getElementById('lstep');if(s&&i<steps.length)s.textContent=steps[i++]},450);
+   setTimeout(()=>{clearInterval(iv);L.remove();const dr=demoScan();ui.photos.forEach(p=>URL.revokeObjectURL(p.url));ui.photos=[];openReceipt(dr,true)},2200);break}
+  case 'cancel':ui.draft=null;go(ui.from==='tax'?'tax':'home');break;
+  case 'allSplit':r.items.forEach(i=>i.who=t.members.map(m=>m.id));render();break;
+  case 'restTo':sheet(`<h3>未分配的品項都給誰？</h3><div class="chips">${t.members.map(m=>`<button class="chip on" data-restpick="${m.id}">${av(m)}${esc(m.name)}</button>`).join('')}</div>`,(s,c)=>s.querySelectorAll('[data-restpick]').forEach(x=>x.onclick=()=>{r.items.forEach(i=>{if(!i.who.length)i.who=[x.dataset.restpick]});c();render()}));break;
+  case 'addAdj':sheet(`<h3>新增折價券／折扣／服務費</h3>
+   <label class="field"><span>名稱</span><input class="inp" id="aL" value="折價券"></label>
+   <div class="row2"><label class="field"><span>類型</span><select class="inp" id="aK"><option value="-1">折扣（減少）</option><option value="1">加收（例如服務費）</option></select></label>
+   <label class="field"><span>金額（日圓）</span><input class="inp" id="aV" inputmode="numeric" placeholder="500"></label></div>
+   <label class="field"><span>套用在</span><select class="inp" id="aS"><option value="">整張收據（依每人金額比例分攤）</option>${r.items.map(i=>`<option value="${i.id}">只算在：${esc(i.zh||i.ja||'未命名')}</option>`).join('')}</select></label>
+   <button class="btn pri block" id="aOk">加入</button>`,(s,c)=>s.querySelector('#aOk').onclick=()=>{const v=parseInt(s.querySelector('#aV').value.replace(/\D/g,''))||0;if(!v){toast('請輸入金額');return}
+    r.adjust.push({label:s.querySelector('#aL').value.trim()||'折價券',amt:v*(+s.querySelector('#aK').value),item:s.querySelector('#aS').value||null});
+    syncManual();c();render()});break;
+  case 'fixDiff':r.adjust.push({label:'其他調整（零頭差異）',amt:r.printed-r.total,item:null});syncManual();render();toast('已加入差額調整');break;
+  case 'addItem':r.items.push({id:uid(),ja:'',zh:'',note:'',qty:1,price:0,tax:10,who:[]});itemSheet(r.items.length-1);break;
+  case 'saveRcpt':{fixTotal(r);const pay=r.payers.reduce((s,p)=>s+(+p.amt||0),0);
+   if(r.payers.length>1&&pay!==r.total){toast('付款金額加起來要等於收據合計');return}
+   if(r.payers.length===1)r.payers[0].amt=r.total;
+   if(!r.store.trim())r.store=r.storeJa||'未命名收據';
+   const un=r.items.filter(i=>!i.who.length).length;
+   const fin=()=>{const x=clone(r);delete x._new;delete x._demo;delete x._multi;const i=t.receipts.findIndex(y=>y.id===x.id);i<0?t.receipts.push(x):t.receipts[i]=x;save();ui.draft=null;go('home');toast('已存進帳本')};
+   un?ask(`還有 ${un} 個品項沒分配，先算在付款人身上？`,'先這樣存',fin):fin();break}
+  case 'delRcpt':ask('刪除這張收據？','刪除',()=>{t.receipts=t.receipts.filter(x=>x.id!==r.id);save();ui.draft=null;go('home');toast('已刪除')});break;
+  case 'addMem':{const n=$('#newMem').value.trim();if(!n)return;t.members.push({id:uid(),name:n,color:COLORS[t.members.length%COLORS.length]});save();render();toast('已加入 '+n);break}
+  case 'testKey':toast(S.settings.key?'第 3 步才會接上 AI，到時這個按鈕會真的測試':'請先貼上 Gemini 金鑰');break;
+  case 'shareImg':shareImage();break;
+  case 'export':{const txt=JSON.stringify(S);try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'application/json'}));a.download=`JaScan備份-${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();a.remove()}catch(e){}navigator.clipboard?.writeText(txt).then(()=>toast('已複製備份，請貼到備忘錄保存'),()=>sheet(`<h3>複製這段文字保存</h3><textarea class="inp" readonly>${esc(txt)}</textarea>`));break}
+  case 'import':sheet(`<h3>貼上備份</h3><textarea class="inp" id="impT" placeholder="貼在這裡"></textarea><button class="btn pri block" id="impGo" style="margin-top:10px">還原</button>`,(s,c)=>s.querySelector('#impGo').onclick=()=>{try{const x=JSON.parse(s.querySelector('#impT').value);if(!x.trips)throw 0;S=x;migrate();save();c();go('home');toast('已還原')}catch(err){toast('這段文字不是有效的備份')}});break;
+  case 'delTrip':ask(`刪除「${esc(t.name)}」和它的 ${t.receipts.length} 張收據？刪除後無法復原。`,'刪除',()=>{S.trips=S.trips.filter(x=>x.id!==t.id);
+   if(!S.trips.length){const me={id:uid(),name:'我',color:COLORS[0]};S.trips=[{id:uid(),name:'我的旅程',start:new Date().toISOString().slice(0,10),end:new Date().toISOString().slice(0,10),members:[me],receipts:[],repaid:[],rate:clone(t.rate)}]}
+   S.cur=S.trips[0].id;save();go('home');toast('已刪除')});break;
+  case 'clearDemo':ask('清除所有收據與還款紀錄？','清除',()=>{S.trips.forEach(x=>{x.receipts=[];x.repaid=[]});save();go('home');toast('已清除')});break;
+  case 'resetDemo':ask('重設成示範資料？目前資料會被覆蓋。','重設',()=>{S=demo();migrate();save();go('home')});break;
+ }
+});
+document.addEventListener('change',e=>{
+ const el=e.target,d=el.dataset,t=trip(),r=ui.draft;
+ if(el.id==='camIn'||el.id==='libIn'){[...el.files].forEach(f=>ui.photos.push({file:f,url:URL.createObjectURL(f)}));el.value='';if(ui.view!=='scan')go('scan');else render();return}
+ if(d.act==='multi'){if(el.checked){r._multi=true;if(r.payers.length===1)r.payers[0].amt=r.total}else{r._multi=false;r.payers=[{m:mainPayer(r)||t.members[0].id,amt:r.total}]}render();return}
+ if(d.claim){const x=t.receipts.find(y=>y.id===d.claim);x.claimed=el.checked;save();render();toast(el.checked?'退稅金已依品項分回給大家':'已取消');return}
+ if(d.carry){const [id,k]=d.carry.split(':');t.receipts.find(y=>y.id===id).items[+k].carry=el.checked;save();return}
+ if(d.act==='manualRate'){t.rate.manual=el.checked?+(t.rate.auto||0.2).toFixed(4):null;save();render();return}
+ if(el.id==='mRate'){const v=parseFloat(el.value);if(v>0&&v<1){t.rate.manual=v;save();toast('匯率已更新')}else toast('請輸入像 0.2050 這樣的數字');return}
+ if(el.id==='tName'){t.name=el.value.trim()||t.name;save();return}
+ if(el.id==='tStart'){t.start=el.value;save();return}
+ if(el.id==='tEnd'){t.end=el.value;save();return}
+ if(el.id==='gKey'){S.settings.key=el.value.trim();save();toast('金鑰已存在這支手機');return}
+ if(el.id==='gModel'){S.settings.model=el.value;save();return}
+ if(r&&d.f){if(d.f==='printed'){const v=el.value.replace(/\D/g,'');r.printed=v?parseInt(v):null}else r[d.f]=el.value;render();return}
+ if(r&&d.pay){const v=parseInt(el.value.replace(/\D/g,''))||0;r.payers=r.payers.filter(p=>p.m!==d.pay);if(v)r.payers.push({m:d.pay,amt:v});render();return}
+});
+
+/* ---------- live exchange rate (works once hosted; preview keeps the saved rate) ---------- */
+(async()=>{try{const t=trip();if(t.rate.updated===new Date().toISOString().slice(0,10)&&t.rate.auto)return;
+ const res=await fetch('https://open.er-api.com/v6/latest/JPY');const j=await res.json();const v=j?.rates?.TWD;
+ if(v){S.trips.forEach(x=>{x.rate.auto=v;x.rate.updated=new Date().toISOString().slice(0,10)});save();render()}}catch(e){}})();
+render();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
