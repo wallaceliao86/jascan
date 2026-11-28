@@ -154,9 +154,9 @@ textarea.inp{min-height:110px;font-size:13px;font-family:ui-monospace,Menlo,mono
 .sw input:checked+i{background:var(--ok)}
 .sw input:checked+i::after{transform:translateX(20px)}
 body.focus .nav{display:none}
-body.focus .wrap{padding-bottom:calc(24px + env(safe-area-inset-bottom))}
-.sticky{position:sticky;bottom:calc(12px + env(safe-area-inset-bottom));z-index:5;display:flex;gap:10px;padding-top:6px}
-.sticky .btn{box-shadow:0 6px 18px rgba(15,27,45,.14)}
+body.focus .wrap{padding-bottom:0}
+.sticky{position:sticky;bottom:0;z-index:5;display:flex;gap:10px;margin:0 -16px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:color-mix(in srgb,var(--bg) 82%,transparent);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);border-top:1px solid var(--line)}
+.sticky .btn.pri{box-shadow:0 4px 14px rgba(10,95,194,.25)}
 .list li{margin-bottom:6px}
 .chk{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
 .chk:first-child{border-top:0}
@@ -225,49 +225,15 @@ const I={
 
 const HI={wallet:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7a2 2 0 0 1 2-2h11v4"/><path d="M4 7v11a2 2 0 0 0 2 2h14V9H6a2 2 0 0 1-2-2"/><circle cx="16" cy="14.5" r="1.2"/></svg>',list:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>',calc:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01"/></svg>',swap:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h14l-3-3M20 16H6l3 3"/></svg>',people:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 19c0-3 2.7-5 6-5s6 2 6 5"/><circle cx="17" cy="9" r="2.3"/><path d="M16 14.2c2.8.3 5 2 5 4.8"/></svg>',rate:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M4 7h6M4 11h6M17 4l-3 6h6l-3 6M14 20h6"/></svg>',spark:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></svg>',box:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7l8-4 8 4v10l-8 4-8-4z"/><path d="M4 7l8 4 8-4M12 11v10"/></svg>',map:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg>'};
 const ht=(ic,t)=>`<span class="ht"><i>${HI[ic]||I[ic]}</i>${t}</span>`;
-/* ---------- demo data (fake, for the preview) ---------- */
-function demo(){
- const m=[{id:'m1',name:'我',color:COLORS[0]},{id:'m2',name:'小美',color:COLORS[1]},{id:'m3',name:'阿傑',color:COLORS[2]}];
- const it=(ja,zh,note,qty,price,tax,who)=>({id:uid(),ja,zh,note,qty,price,tax,who});
- const t={id:'t1',name:'2026 東京・大阪',start:'2026-12-03',end:'2026-12-09',members:m,repaid:[],
-  rate:{auto:0.2014,updated:'2026-11-22',manual:null},
-  receipts:[
-  {id:'r1',storeJa:'マツモトキヨシ 新宿東口店',store:'松本清 新宿東口店',date:'2026-12-04',time:'14:32',payers:[{m:'m1',amt:8866}],adjust:[],total:8866,taxFree:'yes',claimed:false,photos:2,
-   items:[it('キュレル 泡洗顔料 150ml','珂潤 泡沫洗面乳 150ml','',1,1980,10,['m2']),
-   it('ロイヒつぼ膏 156枚','樂衣喜 穴位貼布 156 片','鎮痛貼布（類似撒隆巴斯）',1,1078,10,['m1']),
-   it('龍角散ダイレクト ミント 16包','龍角散 免水喉糖粉 薄荷 16 包','',1,770,10,['m1','m2','m3']),
-   it('ビオレUV アクアリッチ','Bioré 水感防曬精華','',1,1078,10,['m2']),
-   it('メラノCC 美容液','Melano CC 維他命 C 美容液','',1,1320,10,['m3']),
-   it('太田胃散 分包 48包','太田胃散 分包 48 包','腸胃藥',1,2640,10,['m1'])]},
-  {id:'r2',storeJa:'セブン-イレブン 渋谷道玄坂店',store:'7-ELEVEN 澀谷道玄坂店',date:'2026-12-04',time:'09:05',payers:[{m:'m2',amt:722}],adjust:[],total:722,taxFree:'no',claimed:false,photos:1,
-   items:[it('おにぎり 鮭','鮭魚飯糰','',1,168,8,['m1']),
-   it('ツナマヨ','鮪魚美乃滋飯糰','',1,151,8,['m2']),
-   it('午後の紅茶 ミルクティー','午後紅茶 奶茶','',1,162,8,['m3']),
-   it('からあげクン レギュラー','唐揚君 原味炸雞塊','超商熱食',1,238,8,['m1','m2','m3']),
-   it('レジ袋','購物袋','',1,3,10,['m2'])]},
-  {id:'r3',storeJa:'一蘭 渋谷店',store:'一蘭拉麵 澀谷店',date:'2026-12-04',time:'19:48',payers:[{m:'m1',amt:2000},{m:'m3',amt:1700}],adjust:[],total:3700,taxFree:'no',claimed:false,photos:1,
-   items:[it('天然とんこつラーメン ×3','天然豚骨拉麵 ×3','',3,2940,10,['m1','m2','m3']),
-   it('替玉 ×2','加麵 ×2','',2,420,10,['m1','m3']),
-   it('半熟塩ゆでたまご','半熟鹽味溏心蛋','',1,340,10,['m2'])]},
-  {id:'r4',storeJa:'ドン・キホーテ 道頓堀店',store:'唐吉訶德 道頓堀店',date:'2026-12-06',time:'21:17',payers:[{m:'m3',amt:7966}],adjust:[{label:'折價券（クーポン値引）',amt:-500,item:null}],total:7966,taxFree:'yes',claimed:false,photos:3,
-   items:[it('じゃがりこ サラダ 6個パック','Jagariko 沙拉口味 6 入','',1,1078,8,['m2']),
-   it('キットカット 抹茶 大袋','KitKat 抹茶 大包裝','',1,1280,8,['m1','m2','m3']),
-   it('白い恋人 18枚','白色戀人 18 片','',1,1890,8,['m3']),
-   it('象印 ステンレスマグ 0.48L','象印 不鏽鋼保溫杯 0.48L','',1,3580,10,['m1']),
-   it('ハンドクリーム 桜','護手霜 櫻花','',1,638,10,[])]},
-  {id:'r5',storeJa:'タクシー',store:'計程車（飯店 → 新宿）',date:'2026-12-05',time:'22:40',payers:[{m:'m1',amt:2860}],adjust:[],total:2860,taxFree:'no',claimed:false,photos:0,manual:true,
-   items:[it('タクシー','計程車','',1,2860,10,['m1','m2','m3'])]}
-  ]};
- return {cur:'t1',trips:[t],settings:{key:'',model:'gemini-3.8-flash'},v:1};
-}
 function load(){try{const s=localStorage.getItem(KEY);return s?JSON.parse(s):null}catch(e){return null}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 const fixTotal=r=>{r.total=Math.max(0,r.items.reduce((a,i)=>a+(+i.price||0),0)+r.adjust.reduce((a,x)=>a+x.amt,0));if(r.payers.length===1)r.payers[0].amt=r.total;return r};
-let S=load()||demo();
+let S=load()||{cur:null,trips:[],settings:{v1Ready:true},v:1};
 const migrate=()=>{S.settings=Object.assign({key:'',cur:'JPY',mode:'fast'},S.settings||{});{const st=S.settings;if(st.model){if(/lite/.test(st.model))st.fastModel=st.fastModel||st.model;else st.carefulModel=st.carefulModel||st.model;delete st.model}if(st.models&&!st.models.some(m=>/lite/.test(m)))st.models=[...st.models.slice(0,4)]}S.trips.forEach(t=>t.receipts.forEach(r=>{if(r.printed===undefined)r.printed=r.manual?null:r.total;fixTotal(r)}))};migrate();
 const ui={view:'home',cur:(S.settings&&S.settings.cur)||'JPY',draft:null,photos:[],back:'home',from:null};
 const trip=()=>S.trips.find(t=>t.id===S.cur)||S.trips[0];
-const rate=()=>{const r=trip().rate;return r.manual||r.auto||0.2};
+const newRate=()=>({auto:S.settings.rateAuto||null,updated:S.settings.rateUpdated||null,manual:null});
+const rate=()=>{const r=trip()&&trip().rate||{};return r.manual||r.auto||S.settings.rateAuto||0.2};
 const mem=id=>trip().members.find(x=>x.id===id)||{name:'?',color:'#999'};
 const yen=n=>'¥'+Math.round(n).toLocaleString('en-US');
 const nt=n=>'NT$'+Math.round(n*rate()).toLocaleString('en-US');
@@ -329,10 +295,38 @@ function calc(t){
 /* ---------- views ---------- */
 function go(v){ui.view=v;render();window.scrollTo(0,0)}
 function render(){
- document.body.classList.toggle('focus',ui.view==='scan'||ui.view==='receipt');
+ if(!S.trips.length)ui.view='welcome';else if(ui.view==='welcome')ui.view='home';
+ document.body.classList.toggle('focus',['scan','receipt','welcome'].includes(ui.view));
  $('#nav-home').classList.toggle('on',ui.view==='home');
  $('#nav-settings').classList.toggle('on',ui.view==='settings');
- app.innerHTML=({home,scan,receipt,tax,settings}[ui.view]||home)();
+ app.innerHTML=({home,scan,receipt,tax,settings,welcome}[ui.view]||home)();
+}
+function welcome(){
+ const w=ui.w||(ui.w={name:'',start:'',end:'',members:['我']});
+ return `<div style="text-align:center;padding:24px 0 18px"><img src="${ICON}" alt="" style="width:76px;height:76px;border-radius:20px;box-shadow:var(--shadow)"><h1 style="font-size:26px;margin:14px 0 4px">歡迎使用 JaScan</h1><p class="muted" style="margin:0">先建立第一趟旅程，就可以開始掃描收據、分帳。</p></div>
+ <section class="card"><h2>${ht('map','建立旅程')}</h2>
+  <label class="field"><span>旅程名稱</span><input class="inp" id="wName" placeholder="例如：2026 日本" value="${esc(w.name)}"></label>
+  <div class="row2"><div class="field"><span>開始</span>${dateField('id="wS"',w.start,false)}</div><div class="field"><span>結束</span>${dateField('id="wE"',w.end,!!(w.end&&w.start&&yrOf(w.end)!==yrOf(w.start)))}</div></div>
+  <div class="small muted" style="margin-bottom:6px">一起旅行的人（第一位是你，之後也可以增減）</div>
+  <div class="chips" style="margin-bottom:10px">${w.members.map((n,i)=>`<span class="chip plain">${av({id:'w'+i,name:n,color:COLORS[i%COLORS.length]})}${esc(n)}${i?`<button class="delx" data-wrm="${i}" aria-label="移除 ${esc(n)}" style="margin-left:2px">${I.close}</button>`:''}</span>`).join('')}</div>
+  <div style="display:flex;gap:8px"><input class="inp" id="wMem" placeholder="輸入朋友的名字"><button class="btn soft" data-act="wAdd">加入</button></div>
+ </section>
+ <div class="sticky"><button class="btn pri block" data-act="wGo">開始記帳</button></div>`;
+}
+function wipe(){const st=S.settings;S.trips=[];S.cur=null;st.usage=null;st.v1Ready=true;ui.w=null;ui.draft=null;save();go('welcome')}
+function doBackup(){return new Promise(done=>{S.settings.lastBackup=new Date().toISOString().slice(0,10);save();const bk=clone(S);bk.settings.key='';const txt=JSON.stringify(bk);const fn=`JaScan備份-${S.settings.lastBackup}.json`;
+ (async()=>{try{const f=new File([txt],fn,{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f]});toast('備份完成');return done(true)}}catch(e){if(e.name==='AbortError')return done(false)}
+  try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'application/json'}));a.download=fn;document.body.appendChild(a);a.click();a.remove()}catch(e){}
+  try{await navigator.clipboard.writeText(txt);toast('已複製備份，請貼到備忘錄保存');done(true)}catch(e){sheet(`<h3>複製這段文字保存</h3><textarea class="inp" readonly>${esc(txt)}</textarea>`);done(true)}})()})}
+function wipeSheet(first){
+ const rows=S.trips.map(t=>`<li><b>${esc(t.name)}</b>：${t.members.map(m=>esc(m.name)).join('、')}・${t.receipts.length} 張收據${t.repaid.length?`・${t.repaid.length} 筆還款紀錄`:''}</li>`).join('');
+ sheet(`<h3>${first?'開始正式使用':'清除所有資料'}</h3><p class="muted" style="margin-top:-4px">${first?'這是正式版。要把測試期間的資料清掉，從頭開始嗎？':'會刪除下面所有資料，無法復原。'}</p>
+ <div class="small" style="background:var(--card2);border-radius:12px;padding:10px 12px;margin-bottom:10px"><b>會清除</b><ul style="margin:6px 0 0;padding-left:18px">${rows||'<li>目前沒有旅程</li>'}<li>今天已掃描次數</li></ul><b style="display:block;margin-top:8px">會保留</b><div class="muted">Gemini 金鑰、模型設定、讀取模式、幣別偏好</div></div>
+ <button class="btn pri block" id="wpB">先備份，再清除</button><button class="btn danger block" id="wpN" style="margin-top:8px">直接清除</button>${first?'<button class="btn ghost block" id="wpL" style="margin-top:8px">先不要（之後可到設定清除）</button>':''}`,(s,c)=>{
+  s.querySelector('#wpB').onclick=async()=>{const ok=await doBackup();if(ok){c();wipe();toast('已備份並清除')}};
+  s.querySelector('#wpN').onclick=()=>{c();ask('確定直接清除？沒有備份就無法復原。','清除',()=>{wipe();toast('已清除')})};
+  const l=s.querySelector('#wpL');if(l)l.onclick=()=>{S.settings.v1Ready=true;save();c()};
+ });
 }
 function home(){
  const t=trip(),c=calc(t);
@@ -358,7 +352,7 @@ function home(){
  <section class="card"><h2>${ht('rcpt','收據')} <button class="btn sm ghost" data-act="manual">${I.plus}手動記一筆</button></h2>
   ${Object.keys(days).length?Object.entries(days).map(([d,rs])=>`<div class="day">${fmtDate(d)}</div>`+rs.map(r=>{const a=allocate(r);return `<button class="rc" data-open="${r.id}"><span class="tile">${I.rcpt}</span><span class="mid"><b>${esc(r.store)}</b><span>${esc(r.storeJa)}・${r.time}・${r.payers.map(p=>esc(mem(p.m).name)).join('＋')} 付</span></span><span class="rt"><b>${money(r.total)}</b>${r.taxFree==='yes'?`<span class="tag ok">${r.claimed?'已退稅':'可退稅'}</span>`:r.taxFree==='maybe'?'<span class="tag warn">可能可退</span>':''} ${a.unas?`<span class="tag warn">${a.unas} 項未分配</span>`:''}</span></button>`}).join('')).join(''):`<div class="empty">${I.rcpt}<div>還沒有收據，按下方的掃描開始。</div></div>`}
  </section>
- <p class="demo">試看版：目前畫面上是示範用的假資料，可以到「設定」清除。</p>`;
+ `;
 }
 function scan(){
  const n=ui.photos.length;
@@ -375,7 +369,6 @@ function receipt(){
  const multi=r.payers.length>1||r._multi,cmp=t.members.length>3;
  const pay=r.payers.reduce((s,p)=>s+(+p.amt||0),0);
  return `<div class="hdr"><button class="icb" data-act="cancel" aria-label="返回">${I.back}</button><h1>${r._new?'確認收據':'收據明細'}</h1><span class="icb"></span></div>
- ${r._demo?`<div class="note warn">${I.info}<div>這是<b>示範結果</b>：還沒設定 Gemini 金鑰，所以顯示一張假收據。</div></div>`:''}
  ${r._scan?`<div class="note ${r._warn&&r._warn.length?'warn':'info'}">${I.info}<div>${r._warn&&r._warn.length?`<b>AI 提醒：</b>${r._warn.map(esc).join('；')}<br>`:''}請對照紙本確認品項和金額，再勾選每個品項是誰的。<span class="muted small" style="display:block;margin-top:4px">由 ${esc(r._model||'')} ${r._careful?'仔細模式':'快速模式'}讀取・${ui.photos.length} 段照片${r._secs?'・'+r._secs+' 秒':''}</span>${ui.photos.length?`<span style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn sm ghost" data-act="reanalyze">重新分析</button>${r._careful?'':'<button class="btn sm ghost" data-act="reanalyzeCareful">用仔細模式重讀</button>'}</span>`:''}</div></div>`:''}
  <section class="card">
   <div class="row2"><label class="field"><span>店名（中文）</span><input class="inp" data-f="store" value="${esc(r.store)}"></label><div class="field"><span>日期</span>${dateField('data-f="date"',r.date,yrOf(r.date)!==yrOf(t.start))}</div></div>
@@ -457,11 +450,9 @@ function settings(){
   <div class="setrow"><span class="f">旅程<small>目前：${esc(t.name)}・共 ${S.trips.length} 個</small></span><button class="btn sm ghost" id="tripSw2">切換／新增</button></div>
   <div class="setrow"><span class="f">備份<small>${S.settings.lastBackup?'上次備份：'+fmtDay(S.settings.lastBackup,true):'還沒有備份過'}・存成檔案或貼到備忘錄</small></span><button class="btn sm ghost" data-act="export">備份</button></div>
   <div class="setrow"><span class="f">還原<small>貼上之前複製的備份</small></span><button class="btn sm ghost" data-act="import">貼上還原</button></div>
-  <div class="setrow"><span class="f">清除示範資料<small>刪掉假收據，保留旅程和成員</small></span><button class="btn sm danger" data-act="clearDemo">清除</button></div>
-  <div class="setrow"><span class="f">刪除這趟旅程<small>連同所有收據一起刪除</small></span><button class="btn sm danger" data-act="delTrip">刪除</button></div>
-  <div class="setrow"><span class="f">重設成示範資料</span><button class="btn sm ghost" data-act="resetDemo">重設</button></div>
+  <div class="setrow"><span class="f">清除所有資料<small>刪除所有旅程和收據，金鑰和設定會保留</small></span><button class="btn sm danger" data-act="wipe">清除</button></div>
  </section>
- <p class="demo">JaScan 版本 0.5.0</p>`;
+ <p class="demo">JaScan 版本 1.0.0</p>`;
 }
 
 /* ---------- sheets, toast ---------- */
@@ -492,7 +483,7 @@ function tripSheet(){
    if(!n||!ms.length){toast('請填旅程名稱和至少一位成員');return}
    const today=new Date().toISOString().slice(0,10);
    const st=s.querySelector('#ntS').value||today,en=s.querySelector('#ntE').value||st;
-   const t={id:uid(),name:n,start:st,end:en<st?st:en,members:ms.map((x,i)=>({id:uid(),name:x,color:COLORS[i%COLORS.length]})),receipts:[],repaid:[],rate:clone(trip().rate)};
+   const t={id:uid(),name:n,start:st,end:en<st?st:en,members:ms.map((x,i)=>({id:uid(),name:x,color:COLORS[i%COLORS.length]})),receipts:[],repaid:[],rate:newRate()};
    S.trips.push(t);S.cur=t.id;save();c();go('home');toast('已建立「'+n+'」')}});
 }
 function itemSheet(k){
@@ -514,13 +505,6 @@ function newDraft(manual){
  return {id:uid(),storeJa:'',store:'',date:today,time:new Date().toTimeString().slice(0,5),payers:[{m:t.members[0].id,amt:0}],adjust:[],total:0,printed:null,taxFree:'no',claimed:false,photos:0,manual,
   items:[{id:uid(),ja:'',zh:'',note:'',qty:1,price:0,tax:10,who:t.members.map(m=>m.id)}]};
 }
-function demoScan(){
- const t=trip(),r=newDraft(false),me=t.members[0].id;
- Object.assign(r,{printed:1386,storeJa:'ローソン 心斎橋筋店',store:'LAWSON 心齋橋筋店',time:'23:12',photos:ui.photos.length,manual:false,total:1386,payers:[{m:me,amt:1386}],
-  items:[['プレミアムロールケーキ','頂級瑞士捲','LAWSON 招牌甜點',1,216,8],['からあげクン','唐揚君 炸雞塊','',1,238,8],['ザ・チキン ゆず胡椒','炸雞腿 柚子胡椒風味','',1,248,8],['ほろよい 白いサワー','HOROYOI 微醺 乳酸沙瓦','低酒精飲料',2,316,10],['ポカリスエット 500ml','寶礦力水得 500ml','',1,165,8],['ウコンの力','薑黃之力','解酒飲料',1,203,8]].map(([ja,zh,note,qty,price,tax])=>({id:uid(),ja,zh,note,qty,price,tax,who:[]}))});
- r.items[1].who=t.members.map(m=>m.id);r._demo=true;return r;
-}
-
 /* ---------- AI: read the receipt with Gemini ---------- */
 const API='https://generativelanguage.googleapis.com/v1beta';
 const FB_LITE=['gemini-3.5-flash-lite','gemini-3.1-flash-lite','gemini-flash-lite-latest'];
@@ -538,8 +522,8 @@ function shrink(file,max=1400){return new Promise((ok,bad)=>{const im=new Image(
  im.onerror=()=>{URL.revokeObjectURL(u);bad(new Error('img'))};im.src=u})}
 const PROMPT=n=>`You read a Japanese shop receipt for a traveller from Taiwan. The ${n} image(s) are consecutive parts of ONE receipt photographed from top to bottom. Neighbouring photos overlap, so a line that appears in two photos must be listed only once.
 Return JSON only, exactly this shape:
-{"store_ja":"shop name and branch as printed","store_zh":"name in Traditional Chinese as used in Taiwan; keep the usual Taiwan form of known brands (マツモトキヨシ→松本清, ドン・キホーテ→唐吉訶德, セブン-イレブン→7-ELEVEN, ローソン→LAWSON, ファミリーマート→全家)","date":"YYYY-MM-DD","time":"HH:MM","currency":"JPY",
-"items":[{"ja":"item name exactly as printed","zh":"natural Traditional Chinese (Taiwan wording), expand abbreviations into a full product name","note":"short Chinese explanation only when the kind of product is not obvious from the name (e.g. 腸胃藥, 解酒飲料, 超商熱食); otherwise empty","qty":1,"price":0,"discount":0,"tax":10}],
+{"store_ja":"shop name and branch as printed","store_zh":"name in Traditional Chinese as used in Taiwan; keep the usual Taiwan form of known brands (マツモトキヨシ→松本清, ドン・キホーテ→唐吉訶德, セブン-イレブン→7-ELEVEN, ローソン→LAWSON, ファミリーマート→全家; for any other shop translate or transliterate its own name)","date":"YYYY-MM-DD","time":"HH:MM","currency":"JPY",
+"items":[{"ja":"item name exactly as printed","zh":"natural Traditional Chinese (Taiwan wording), expand abbreviations into a full product name","note":"short Traditional Chinese description of what the product is, only when that is not obvious from the name; otherwise empty","qty":1,"price":0,"discount":0,"tax":10}],
 "adjustments":[{"label":"Chinese label followed by the Japanese in brackets, e.g. 折價券（クーポン値引）","amount":0}],
 "total":0,"tax_mode":"included","tax_free":"no","warnings":[]}
 Field rules:
@@ -553,6 +537,9 @@ Field rules:
 - Never list these as items or adjustments: 小計, 内消費税, 内税, 対象額, お預り, お釣り, 現計, クレジット, 電子マネー, points earned, barcodes.
 - A shopping bag (レジ袋) is an item. A line like "2コ×¥158" belongs to the item above it.
 - Check that sum(price)+sum(discount)+sum(adjustments) equals total. If not, keep the printed numbers and add a warning.
+- Language: zh, note, store_zh, labels and warnings must be Traditional Chinese only. Latin brand names and digits may stay as printed (e.g. Pocky, DHC). Never output any other language or script (no Hindi, Korean, Thai, Simplified Chinese, etc.).
+- Do not add a brand, chain or shop name that is not printed in that item's own line. Translate what is printed; do not guess.
+- note: write it only when someone from Taiwan could not tell what the product is from the translated name (for example a medicine or an unfamiliar snack), and describe this specific product. Leave it empty for ordinary items such as rice balls, drinks or bags.
 - warnings: short notes in Traditional Chinese about anything blurred, cut off or uncertain. Empty array if none.
 - If the images are not a receipt, return {"error":"not_receipt"}.`;
 class AIError extends Error{constructor(kind,msg){super(msg);this.kind=kind}}
@@ -627,14 +614,16 @@ function readReceipt(images,o={}){
  });
 }
 const num=v=>{const n=parseInt(String(v??'').replace(/[^\d-]/g,''));return isNaN(n)?0:n};
+const ODD=/[Ѐ-ӿ֐-ۿऀ-෿฀-໿ᄀ-ᇿ가-힯]+/g;
+const tidy=v=>String(v??'').replace(ODD,' ').replace(/\s{2,}/g,' ').trim();
 function toDraft(o,model){
  const t=trip(),r=newDraft(false);
  r.items=[];r.adjust=[];
- (o.items||[]).forEach(i=>{const it={id:uid(),ja:String(i.ja||''),zh:String(i.zh||i.ja||''),note:String(i.note||''),qty:num(i.qty)||1,price:num(i.price),tax:num(i.tax)===8?8:10,who:[]};
+ (o.items||[]).forEach(i=>{const it={id:uid(),ja:String(i.ja||''),zh:tidy(i.zh)||String(i.ja||''),note:tidy(i.note),qty:num(i.qty)||1,price:num(i.price),tax:num(i.tax)===8?8:10,who:[]};
   r.items.push(it);const d=num(i.discount);if(d)r.adjust.push({label:'單品折扣（'+(it.zh||it.ja)+'）',amt:-Math.abs(d),item:it.id})});
- (o.adjustments||[]).forEach(a=>{const v=num(a.amount);if(v)r.adjust.push({label:String(a.label||'調整'),amt:v,item:null})});
+ (o.adjustments||[]).forEach(a=>{const v=num(a.amount);if(v)r.adjust.push({label:tidy(a.label)||'調整',amt:v,item:null})});
  if(!r.items.length)r.items.push({id:uid(),ja:'',zh:'',note:'',qty:1,price:0,tax:10,who:[]});
- Object.assign(r,{storeJa:String(o.store_ja||''),store:String(o.store_zh||o.store_ja||''),printed:num(o.total)||null,taxFree:['yes','maybe'].includes(o.tax_free)?o.tax_free:'no',photos:ui.photos.length,_scan:true,_model:model,_warn:[...(o.warnings||[])].map(String)});
+ Object.assign(r,{storeJa:String(o.store_ja||''),store:tidy(o.store_zh)||String(o.store_ja||''),printed:num(o.total)||null,taxFree:['yes','maybe'].includes(o.tax_free)?o.tax_free:'no',photos:ui.photos.length,_scan:true,_model:model,_warn:[...(o.warnings||[])].map(tidy).filter(Boolean)});
  if(/^\d{4}-\d{2}-\d{2}$/.test(o.date||''))r.date=o.date;if(/^\d{1,2}:\d{2}$/.test(o.time||''))r.time=o.time.padStart(5,'0');
  if(o.currency&&o.currency!=='JPY')r._warn.unshift('這張收據看起來不是日圓（'+o.currency+'），金額會被當成日圓計算');
  fixTotal(r);if(r.printed&&r.printed!==r.total)r._warn.push('品項加總和收據合計不一致');
@@ -777,6 +766,7 @@ document.addEventListener('click',e=>{
  if(d.whoall!==undefined){const it=r.items[+d.whoall];it.who=it.who.length===t.members.length?[]:t.members.map(m=>m.id);render();return}
  if(d.edit!==undefined){itemSheet(+d.edit);return}
  if(d.deladj!==undefined){r.adjust.splice(+d.deladj,1);syncManual();render();return}
+ if(d.wrm!==undefined){ui.w.members.splice(+d.wrm,1);render();return}
  if(d.mode){S.settings.mode=d.mode;save();render();return}
  if(d.tf){r.taxFree=d.tf;render();return}
  if(d.renmem){const m=mem(d.renmem);sheet(`<h3>改名</h3><input class="inp" id="rnV" value="${esc(m.name)}"><button class="btn pri block" id="rnOk" style="margin-top:12px">完成</button>`,(s,c)=>s.querySelector('#rnOk').onclick=()=>{const v=s.querySelector('#rnV').value.trim();if(v){m.name=v;save()}c();render()});return}
@@ -786,13 +776,18 @@ document.addEventListener('click',e=>{
   ask(`移除 ${esc(mem(d.rmmem).name)}？`,'移除',()=>{t.members=t.members.filter(m=>m.id!==d.rmmem);save();render()});return}
  switch(d.act){
   case 'manual':openReceipt(newDraft(true),true);break;
-  case 'analyze':if(!S.settings.key){sheet(`<h3>還沒設定 Gemini 金鑰</h3><p class="muted">要讀收據，需要先到「設定」貼上你的 Gemini 免費金鑰。</p><div style="display:flex;gap:10px"><button class="btn ghost" style="flex:1" id="dmo">先看示範結果</button><button class="btn pri" style="flex:1" id="toSet">去設定</button></div>`,(s,c)=>{s.querySelector('#toSet').onclick=()=>{c();go('settings')};s.querySelector('#dmo').onclick=()=>{c();openReceipt(demoScan(),true)}});break}
+  case 'analyze':if(!S.settings.key){sheet(`<h3>還沒設定 Gemini 金鑰</h3><p class="muted">要讀收據，需要先到「設定」貼上你的 Gemini 免費金鑰。</p><div style="display:flex;gap:10px"><button class="btn ghost" style="flex:1" id="mnl2">手動記一筆</button><button class="btn pri" style="flex:1" id="toSet">去設定</button></div>`,(s,c)=>{s.querySelector('#toSet').onclick=()=>{c();go('settings')};s.querySelector('#mnl2').onclick=()=>{c();openReceipt(newDraft(true),true)}});break}
    analyze();break;
   case 'reanalyze':analyze();break;
   case 'reanalyzeCareful':analyze({careful:true});break;
-  case 'cancel':{const back=ui.draft&&ui.draft._new&&ui.draft._scan&&ui.photos.length?'scan':(ui.from==='tax'?'tax':'home');ui.draft=null;go(back);break}
+  case 'cancel':{const back=['scan','tax'].includes(ui.from)?ui.from:'home';ui.draft=null;go(back);break}
   case 'allSplit':r.items.forEach(i=>i.who=t.members.map(m=>m.id));render();break;
   case 'restTo':sheet(`<h3>未分配的品項都給誰？</h3><div class="chips">${t.members.map(m=>`<button class="chip on" data-restpick="${m.id}">${av(m)}${esc(m.name)}</button>`).join('')}</div>`,(s,c)=>s.querySelectorAll('[data-restpick]').forEach(x=>x.onclick=()=>{r.items.forEach(i=>{if(!i.who.length)i.who=[x.dataset.restpick]});c();render()}));break;
+  case 'wAdd':{const n=$('#wMem').value.trim();if(!n)return;ui.w.members.push(n);render();setTimeout(()=>$('#wMem')&&$('#wMem').focus(),0);break}
+  case 'wGo':{const w=ui.w,today=new Date().toISOString().slice(0,10);w.name=($('#wName').value||'').trim();if(!w.name){toast('請輸入旅程名稱');return}
+   const st=w.start||today,en=w.end&&w.end>=st?w.end:st;
+   const t={id:uid(),name:w.name,start:st,end:en,members:w.members.map((x,i)=>({id:uid(),name:x,color:COLORS[i%COLORS.length]})),receipts:[],repaid:[],rate:newRate()};
+   S.trips.push(t);S.cur=t.id;S.settings.v1Ready=true;ui.w=null;save();go('home');fetchRate();toast('已建立「'+t.name+'」');break}
   case 'addAdj':sheet(`<h3>新增折價券／折扣／服務費</h3>
    <label class="field"><span>名稱</span><input class="inp" id="aL" value="折價券"></label>
    <div class="row2"><label class="field"><span>類型</span><select class="inp" id="aK"><option value="-1">折扣（減少）</option><option value="1">加收（例如服務費）</option></select></label>
@@ -808,23 +803,18 @@ document.addEventListener('click',e=>{
    if(r.payers.length===1)r.payers[0].amt=r.total;
    if(!r.store.trim())r.store=r.storeJa||'未命名收據';
    const un=r.items.filter(i=>!i.who.length).length;
-   const fin=()=>{if(r._scan){ui.photos.forEach(p=>URL.revokeObjectURL(p.url));ui.photos=[]}const x=clone(r);['_new','_demo','_multi','_scan','_warn','_model','_careful','_secs'].forEach(k=>delete x[k]);const i=t.receipts.findIndex(y=>y.id===x.id);i<0?t.receipts.push(x):t.receipts[i]=x;save();ui.draft=null;go('home');toast('已存進帳本')};
+   const fin=()=>{if(r._scan){ui.photos.forEach(p=>URL.revokeObjectURL(p.url));ui.photos=[]}const x=clone(r);['_new','_multi','_scan','_warn','_model','_careful','_secs'].forEach(k=>delete x[k]);const i=t.receipts.findIndex(y=>y.id===x.id);i<0?t.receipts.push(x):t.receipts[i]=x;save();ui.draft=null;go('home');toast('已存進帳本')};
    un?ask(`還有 ${un} 個品項沒分配，先算在付款人身上？`,'先這樣存',fin):fin();break}
   case 'delRcpt':ask('刪除這張收據？','刪除',()=>{t.receipts=t.receipts.filter(x=>x.id!==r.id);save();ui.draft=null;go('home');toast('已刪除')});break;
   case 'addMem':{const n=$('#newMem').value.trim();if(!n)return;t.members.push({id:uid(),name:n,color:COLORS[t.members.length%COLORS.length]});save();render();toast('已加入 '+n);break}
   case 'testKey':testKey(b);break;
   case 'diagnose':diagnose();break;
   case 'shareImg':shareImage();break;
-  case 'export':{S.settings.lastBackup=new Date().toISOString().slice(0,10);save();const bk=clone(S);bk.settings.key='';const txt=JSON.stringify(bk);const fn=`JaScan備份-${S.settings.lastBackup}.json`;
-   (async()=>{try{const f=new File([txt],fn,{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f]});toast('備份完成');render();return}}catch(e){if(e.name==='AbortError')return}
-    try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'application/json'}));a.download=fn;document.body.appendChild(a);a.click();a.remove()}catch(e){}
-    navigator.clipboard?.writeText(txt).then(()=>toast('已複製備份，請貼到備忘錄保存'),()=>sheet(`<h3>複製這段文字保存</h3><textarea class="inp" readonly>${esc(txt)}</textarea>`));render()})();break}
+  case 'export':doBackup().then(()=>render());break;
   case 'import':sheet(`<h3>還原備份</h3><label class="btn ghost block" style="margin-bottom:10px">選擇備份檔<input type="file" id="impF" accept=".json,application/json" hidden></label><textarea class="inp" id="impT" placeholder="或把複製的備份貼在這裡"></textarea><button class="btn pri block" id="impGo" style="margin-top:10px">還原</button>`,(s,c)=>{s.querySelector('#impF').onchange=async e=>{const f=e.target.files[0];if(f)s.querySelector('#impT').value=await f.text()};s.querySelector('#impGo').onclick=()=>{try{const x=JSON.parse(s.querySelector('#impT').value);if(!x.trips)throw 0;const k=S.settings.key;S=x;migrate();if(!S.settings.key)S.settings.key=k;save();c();go('home');toast('已還原')}catch(err){toast('這段文字不是有效的備份')}}});break;
   case 'delTrip':ask(`刪除「${esc(t.name)}」和它的 ${t.receipts.length} 張收據？刪除後無法復原。`,'刪除',()=>{S.trips=S.trips.filter(x=>x.id!==t.id);
-   if(!S.trips.length){const me={id:uid(),name:'我',color:COLORS[0]};S.trips=[{id:uid(),name:'我的旅程',start:new Date().toISOString().slice(0,10),end:new Date().toISOString().slice(0,10),members:[me],receipts:[],repaid:[],rate:clone(t.rate)}]}
-   S.cur=S.trips[0].id;save();go('home');toast('已刪除')});break;
-  case 'clearDemo':ask('清除所有收據與還款紀錄？','清除',()=>{S.trips.forEach(x=>{x.receipts=[];x.repaid=[]});save();go('home');toast('已清除')});break;
-  case 'resetDemo':ask('重設成示範資料？目前資料會被覆蓋。','重設',()=>{S=demo();migrate();save();go('home')});break;
+   S.cur=S.trips[0]?S.trips[0].id:null;save();go('home');toast('已刪除')});break;
+  case 'wipe':wipeSheet(false);break;
  }
 });
 document.addEventListener('change',e=>{
@@ -837,6 +827,9 @@ document.addEventListener('change',e=>{
  if(d.act==='manualRate'){t.rate.manual=el.checked?+(t.rate.auto||0.2).toFixed(4):null;save();render();return}
  if(el.id==='mRate'){const v=parseFloat(el.value);if(v>0&&v<1){t.rate.manual=v;save();toast('匯率已更新')}else toast('請輸入像 0.2050 這樣的數字');return}
  if(el.id==='tName'){t.name=el.value.trim()||t.name;save();return}
+ if(el.id==='wName'){ui.w.name=el.value;return}
+ if(el.id==='wS'){ui.w.start=el.value;if(ui.w.end&&ui.w.end<el.value)ui.w.end=el.value;render();return}
+ if(el.id==='wE'){ui.w.end=el.value;render();return}
  if(el.id==='tStart'){if(el.value){t.start=el.value;if(t.end<t.start)t.end=t.start;save();render()}return}
  if(el.id==='tEnd'){if(el.value){t.end=el.value<t.start?t.start:el.value;save();render()}return}
  if(el.id==='gKey'){S.settings.key=el.value.trim();save();toast('金鑰已存在這支手機');return}
@@ -847,11 +840,13 @@ document.addEventListener('change',e=>{
 });
 
 /* ---------- live exchange rate (works once hosted; preview keeps the saved rate) ---------- */
-(async()=>{try{const t=trip();if(t.rate.updated===new Date().toISOString().slice(0,10)&&t.rate.auto)return;
- const res=await fetch('https://open.er-api.com/v6/latest/JPY');const j=await res.json();const v=j?.rates?.TWD;
- if(v){S.trips.forEach(x=>{x.rate.auto=v;x.rate.updated=new Date().toISOString().slice(0,10)});save();render()}}catch(e){}})();
+async function fetchRate(){try{const today=new Date().toISOString().slice(0,10);if(S.settings.rateUpdated===today&&S.trips.every(t=>t.rate.auto))return;
+ const res=await fetch('https://open.er-api.com/v6/latest/JPY');const j=await res.json();const v=j&&j.rates&&j.rates.TWD;
+ if(v){S.settings.rateAuto=v;S.settings.rateUpdated=today;S.trips.forEach(x=>{x.rate.auto=v;x.rate.updated=today});save();render()}}catch(e){}}
+fetchRate();
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist().then(ok=>{S.settings.persisted=ok;save()})}catch(e){}
 render();
+if(!S.settings.v1Ready&&S.trips.length)setTimeout(()=>wipeSheet(true),400);
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
 </script>
