@@ -169,7 +169,14 @@ body.focus .wrap{padding-bottom:calc(24px + env(safe-area-inset-bottom))}
 .setrow .f small{display:block;color:var(--mute);font-size:12px}
 .scrim{position:fixed;inset:0;background:rgba(5,12,24,.45);z-index:40;display:flex;align-items:flex-end;justify-content:center;animation:fade .18s}
 .sheet{background:var(--card);width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:10px 18px calc(20px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto;animation:up .22s ease-out}
-.sheet .grab{width:38px;height:5px;border-radius:9px;background:var(--line);margin:0 auto 12px}
+.sheet{position:relative;overscroll-behavior:contain}
+.sheet .grab{width:42px;height:5px;border-radius:9px;background:var(--line);margin:0 auto 12px;box-shadow:0 0 0 14px transparent}
+.sheet .sx{position:absolute;right:10px;top:10px;width:36px;height:36px;border-radius:50%;background:var(--card2);color:var(--mute);display:grid;place-items:center}
+.sheet .sx svg{width:18px;height:18px}
+.sheet h3{padding-right:40px}
+.dfield{position:relative;display:flex;align-items:center;justify-content:space-between;gap:6px;white-space:nowrap;overflow:hidden}
+.dfield input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;-webkit-appearance:none;appearance:none}
+.dfield svg{flex:none;color:var(--mute)}
 .sheet h3{margin:0 0 12px;font-size:18px}
 .loading{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;text-align:center}
 .loading .rcpt{width:120px;height:150px;background:var(--card);border-radius:10px;box-shadow:var(--shadow);position:relative;overflow:hidden;padding:18px 16px}
@@ -268,6 +275,12 @@ const money=n=>ui.cur==='JPY'?yen(n):nt(n);
 const alt=n=>ui.cur==='JPY'?'≈ '+nt(n):yen(n);
 const avl=m=>{const c=m.name.slice(0,1);const clash=(trip()?.members||[]).some(o=>o.id!==m.id&&o.name.slice(0,1)===c);return clash?m.name.slice(0,2):c};
 const av=(m,sz)=>{const l=avl(m);return `<span class="av" style="background:${m.color}${sz?`;width:${sz}px;height:${sz}px`:''}${l.length>1?';font-size:10px;letter-spacing:-.5px':''}">${esc(l)}</span>`};
+const WD='日一二三四五六';
+const fmtDay=(d,yr)=>{if(!d)return '選擇日期';const x=new Date(d+'T00:00');return `${yr?x.getFullYear()+'/':''}${x.getMonth()+1}/${x.getDate()}（${WD[x.getDay()]}）`};
+const fmtShort=(d,yr)=>{const x=new Date(d+'T00:00');return `${yr?x.getFullYear()+'/':''}${x.getMonth()+1}/${x.getDate()}`};
+const yrOf=d=>(d||'').slice(0,4);
+const cal='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>';
+const dateField=(attrs,val,yr)=>`<label class="inp dfield"><span class="dtxt">${fmtDay(val,yr)}</span>${cal}<input type="date" ${attrs} value="${val||''}" data-yr="${yr?1:''}"></label>`;
 const fmtDate=d=>{const x=new Date(d+'T00:00');return `${x.getMonth()+1}/${x.getDate()}（${'日一二三四五六'[x.getDay()]}）`};
 
 /* ---------- the money logic ---------- */
@@ -327,7 +340,7 @@ function home(){
  return `
  <div class="top"><img src="${ICON}" alt=""><div class="t">
   <button id="tripSw" style="text-align:left"><h1><span>${esc(t.name)}</span>${I.down}</h1></button>
-  <small>${t.start.slice(5).replace('-','/')} – ${t.end.slice(5).replace('-','/')}・${t.members.length} 人</small></div>
+  <small>${fmtShort(t.start)} – ${fmtShort(t.end,yrOf(t.end)!==yrOf(t.start))}・${t.members.length} 人</small></div>
   <div class="seg" role="group" aria-label="顯示幣別"><button data-cur="JPY" class="${ui.cur==='JPY'?'on':''}">¥ 日圓</button><button data-cur="TWD" class="${ui.cur==='TWD'?'on':''}">NT$</button></div></div>
  <section class="hero"><div class="lbl">這趟旅程總花費</div><div class="big">${money(c.total)}</div>
   <div class="sub">${alt(c.total)}・匯率 1 円 ≈ NT$${rate().toFixed(4)}</div>
@@ -363,9 +376,9 @@ function receipt(){
  const pay=r.payers.reduce((s,p)=>s+(+p.amt||0),0);
  return `<div class="hdr"><button class="icb" data-act="cancel" aria-label="返回">${I.back}</button><h1>${r._new?'確認收據':'收據明細'}</h1><span class="icb"></span></div>
  ${r._demo?`<div class="note warn">${I.info}<div>這是<b>示範結果</b>：還沒設定 Gemini 金鑰，所以顯示一張假收據。</div></div>`:''}
- ${r._scan?`<div class="note ${r._warn&&r._warn.length?'warn':'info'}">${I.info}<div>${r._warn&&r._warn.length?`<b>AI 提醒：</b>${r._warn.map(esc).join('；')}<br>`:''}請對照紙本確認品項和金額，再勾選每個品項是誰的。<span class="muted small" style="display:block;margin-top:4px">由 ${esc(r._model||'')} 讀取・${ui.photos.length} 段照片</span>${ui.photos.length?`<button class="btn sm ghost" data-act="reanalyze" style="margin-top:8px">重新分析</button>`:''}</div></div>`:''}
+ ${r._scan?`<div class="note ${r._warn&&r._warn.length?'warn':'info'}">${I.info}<div>${r._warn&&r._warn.length?`<b>AI 提醒：</b>${r._warn.map(esc).join('；')}<br>`:''}請對照紙本確認品項和金額，再勾選每個品項是誰的。<span class="muted small" style="display:block;margin-top:4px">由 ${esc(r._model||'')} ${r._careful?'仔細模式':'快速模式'}讀取・${ui.photos.length} 段照片${r._secs?'・'+r._secs+' 秒':''}</span>${ui.photos.length?`<span style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn sm ghost" data-act="reanalyze">重新分析</button>${r._careful?'':'<button class="btn sm ghost" data-act="reanalyzeCareful">用仔細模式重讀</button>'}</span>`:''}</div></div>`:''}
  <section class="card">
-  <div class="row2"><label class="field"><span>店名（中文）</span><input class="inp" data-f="store" value="${esc(r.store)}"></label><label class="field"><span>日期</span><input class="inp" type="date" data-f="date" value="${r.date}"></label></div>
+  <div class="row2"><label class="field"><span>店名（中文）</span><input class="inp" data-f="store" value="${esc(r.store)}"></label><div class="field"><span>日期</span>${dateField('data-f="date"',r.date,yrOf(r.date)!==yrOf(t.start))}</div></div>
   <label class="field" style="margin-bottom:4px"><span>日文原文</span><input class="inp" data-f="storeJa" value="${esc(r.storeJa)}"></label>
  </section>
  <section class="card"><h2>${ht('wallet','誰付錢')}</h2>
@@ -421,25 +434,26 @@ function settings(){
  return `<div class="hdr"><span class="icb"></span><h1>設定</h1><span class="icb"></span></div>
  <section class="card"><h2>${ht('map','這趟旅程')}</h2>
   <label class="field"><span>旅程名稱</span><input class="inp" id="tName" value="${esc(t.name)}"></label>
-  <div class="row2"><label class="field"><span>開始</span><input class="inp" type="date" id="tStart" value="${t.start}"></label><label class="field"><span>結束</span><input class="inp" type="date" id="tEnd" value="${t.end}"></label></div>
+  <div class="row2"><div class="field"><span>開始</span>${dateField('id="tStart"',t.start,false)}</div><div class="field"><span>結束</span>${dateField('id="tEnd"',t.end,yrOf(t.end)!==yrOf(t.start))}</div></div>
   <div class="small muted" style="margin-bottom:4px">成員</div>
   ${t.members.map(m=>`<div class="setrow">${av(m)}<span class="f">${esc(m.name)}</span><button class="btn sm ghost" data-renmem="${m.id}">改名</button><button class="btn sm ghost" data-rmmem="${m.id}">移除</button></div>`).join('')}
   <div style="display:flex;gap:8px;margin-top:8px"><input class="inp" id="newMem" placeholder="新成員名字"><button class="btn soft" data-act="addMem">加入</button></div>
  </section>
  <section class="card"><h2>${ht('rate','匯率')}</h2>
-  <div class="setrow"><span class="f">自動匯率<small>每天更新・上次 ${esc(r.updated||'—')}</small></span><b>1 円 ≈ NT$${(r.auto||0).toFixed(4)}</b></div>
+  <div class="setrow"><span class="f">自動匯率<small>每天更新・上次 ${r.updated?fmtShort(r.updated):'—'}</small></span><b>1 円 ≈ NT$${(r.auto||0).toFixed(4)}</b></div>
   <div class="toggle"><span>改用我自己輸入的匯率<small class="muted" style="display:block;font-size:12px">例如照信用卡帳單的實際匯率</small></span><label class="sw"><input type="checkbox" data-act="manualRate" ${r.manual?'checked':''}><i></i></label></div>
   ${r.manual?`<label class="field"><span>1 日圓 = 多少新台幣</span><input class="inp" id="mRate" inputmode="decimal" value="${r.manual}"></label>`:''}
  </section>
  <section class="card"><h2>${ht('spark','AI 辨識')}</h2>
   <label class="field"><span>Gemini 金鑰（只存在這支手機）</span><input class="inp" id="gKey" type="password" autocomplete="off" placeholder="AIza…" value="${esc(S.settings.key)}"></label>
   <label class="field"><span>主要使用的模型</span><select class="inp" id="gModel">${modelList().map(v=>`<option value="${v}" ${S.settings.model===v?'selected':''}>${modelLabel(v)}</option>`).join('')}</select></label>
-  <p class="small muted" style="margin:-4px 0 12px">主要模型的免費額度用完或忙線時，會自動改用其他模型。今天已掃描 ${usedToday()} 次。</p>
+  <div class="field"><span class="small muted" style="display:block;margin-bottom:4px">讀取模式</span><div class="seg" role="group" style="display:flex">${[['fast','快速（建議）'],['careful','仔細（較慢較準）']].map(([v,l])=>`<button style="flex:1" data-mode="${v}" class="${(S.settings.mode||'fast')===v?'on':''}">${l}</button>`).join('')}</div></div>
+  <p class="small muted" style="margin:-4px 0 12px">主要模型回應太慢、額度用完或忙線時，會自動改用其他模型；每次最多 45 秒。今天已掃描 ${usedToday()} 次。</p>
   <button class="btn ghost block" data-act="testKey">測試連線（並更新可用模型）</button>
  </section>
  <section class="card"><h2>${ht('box','資料')}</h2>
   <div class="setrow"><span class="f">旅程<small>目前：${esc(t.name)}・共 ${S.trips.length} 個</small></span><button class="btn sm ghost" id="tripSw2">切換／新增</button></div>
-  <div class="setrow"><span class="f">備份<small>複製全部資料，貼到備忘錄保存</small></span><button class="btn sm ghost" data-act="export">複製備份</button></div>
+  <div class="setrow"><span class="f">備份<small>${S.settings.lastBackup?'上次備份：'+fmtDay(S.settings.lastBackup,true):'還沒有備份過'}・存成檔案或貼到備忘錄</small></span><button class="btn sm ghost" data-act="export">備份</button></div>
   <div class="setrow"><span class="f">還原<small>貼上之前複製的備份</small></span><button class="btn sm ghost" data-act="import">貼上還原</button></div>
   <div class="setrow"><span class="f">清除示範資料<small>刪掉假收據，保留旅程和成員</small></span><button class="btn sm danger" data-act="clearDemo">清除</button></div>
   <div class="setrow"><span class="f">刪除這趟旅程<small>連同所有收據一起刪除</small></span><button class="btn sm danger" data-act="delTrip">刪除</button></div>
@@ -450,23 +464,33 @@ function settings(){
 
 /* ---------- sheets, toast ---------- */
 function sheet(html,bind){
- const s=document.createElement('div');s.className='scrim';s.innerHTML=`<div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>${html}</div>`;
- s.addEventListener('click',e=>{if(e.target===s||e.target.closest('[data-x]'))s.remove()});
- document.body.appendChild(s);bind&&bind(s,()=>s.remove());
+ const s=document.createElement('div');s.className='scrim';s.innerHTML=`<div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div><button class="sx" data-x aria-label="關閉">${I.close}</button>${html}</div>`;
+ const sh=s.firstElementChild;let closed=false;
+ const close=()=>{if(closed)return;closed=true;sh.style.transition='transform .2s ease-in';sh.style.transform='translateY(100%)';s.style.transition='opacity .2s';s.style.opacity='0';setTimeout(()=>s.remove(),200)};
+ s.addEventListener('click',e=>{if(e.target===s||e.target.closest('[data-x]'))close()});
+ // drag down to close: start on the handle area, or anywhere when the sheet is scrolled to the top
+ let y0=null,dy=0,t0=0;
+ sh.addEventListener('touchstart',e=>{const tg=e.target;if(/^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName))return;const top=e.touches[0].clientY-sh.getBoundingClientRect().top;
+  if(sh.scrollTop>0&&top>48)return;y0=e.touches[0].clientY;dy=0;t0=Date.now();sh.style.transition='none'},{passive:true});
+ sh.addEventListener('touchmove',e=>{if(y0===null)return;dy=e.touches[0].clientY-y0;if(dy>0){if(e.cancelable)e.preventDefault();sh.style.transform=`translateY(${dy}px)`;s.style.background=`rgba(5,12,24,${Math.max(.1,.45-dy/900)})`}},{passive:false});
+ sh.addEventListener('touchend',()=>{if(y0===null)return;const v=dy/Math.max(1,Date.now()-t0);y0=null;
+  if(dy>110||(dy>30&&v>.6))close();else{sh.style.transition='transform .2s';sh.style.transform='';s.style.background=''}});
+ document.body.appendChild(s);bind&&bind(s,close);
 }
 function ask(msg,okLabel,fn){sheet(`<h3>${msg}</h3><div style="display:flex;gap:10px"><button class="btn ghost" style="flex:1" data-x>取消</button><button class="btn pri" style="flex:1" id="okb">${okLabel}</button></div>`,(s,c)=>s.querySelector('#okb').onclick=()=>{c();fn()})}
 let tt;function toast(m){document.querySelector('.toast')?.remove();const d=document.createElement('div');d.className='toast';d.textContent=m;document.body.appendChild(d);clearTimeout(tt);tt=setTimeout(()=>d.remove(),2600)}
 function tripSheet(){
- sheet(`<h3>切換旅程</h3>${S.trips.map(t=>`<button class="setrow" style="width:100%;text-align:left" data-pick="${t.id}"><span class="f"><b>${esc(t.name)}</b><small>${t.members.map(m=>esc(m.name)).join('、')}・${t.receipts.length} 張收據</small></span>${t.id===S.cur?'<span class="okc">目前</span>':''}</button>`).join('')}
+ sheet(`<h3>切換旅程</h3>${S.trips.map(t=>`<button class="setrow" style="width:100%;text-align:left" data-pick="${t.id}"><span class="f"><b>${esc(t.name)}</b><small>${fmtShort(t.start,true)} – ${fmtShort(t.end,yrOf(t.end)!==yrOf(t.start))}・${t.members.map(m=>esc(m.name)).join('、')}・${t.receipts.length} 張收據</small></span>${t.id===S.cur?'<span class="okc">目前</span>':''}</button>`).join('')}
  <h3 style="margin-top:18px">新增旅程</h3><label class="field"><span>名稱</span><input class="inp" id="ntN" placeholder="例如：2027 北海道"></label>
  <label class="field"><span>成員（用逗號或空白分開，第一位是你）</span><input class="inp" id="ntM" value="我"></label>
- <div class="row2"><label class="field"><span>開始</span><input class="inp" type="date" id="ntS"></label><label class="field"><span>結束</span><input class="inp" type="date" id="ntE"></label></div>
+ <div class="row2"><div class="field"><span>開始</span>${dateField('id="ntS"','',false)}</div><div class="field"><span>結束</span>${dateField('id="ntE"','',false)}</div></div>
  <button class="btn pri block" id="ntGo">建立</button>`,(s,c)=>{
   s.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{S.cur=b.dataset.pick;save();c();go('home')});
   s.querySelector('#ntGo').onclick=()=>{const n=s.querySelector('#ntN').value.trim();const ms=s.querySelector('#ntM').value.split(/[,，、\s]+/).filter(Boolean);
    if(!n||!ms.length){toast('請填旅程名稱和至少一位成員');return}
    const today=new Date().toISOString().slice(0,10);
-   const t={id:uid(),name:n,start:s.querySelector('#ntS').value||today,end:s.querySelector('#ntE').value||today,members:ms.map((x,i)=>({id:uid(),name:x,color:COLORS[i%COLORS.length]})),receipts:[],repaid:[],rate:clone(trip().rate)};
+   const st=s.querySelector('#ntS').value||today,en=s.querySelector('#ntE').value||st;
+   const t={id:uid(),name:n,start:st,end:en<st?st:en,members:ms.map((x,i)=>({id:uid(),name:x,color:COLORS[i%COLORS.length]})),receipts:[],repaid:[],rate:clone(trip().rate)};
    S.trips.push(t);S.cur=t.id;save();c();go('home');toast('已建立「'+n+'」')}});
 }
 function itemSheet(k){
@@ -527,29 +551,53 @@ Field rules:
 - warnings: short notes in Traditional Chinese about anything blurred, cut off or uncertain. Empty array if none.
 - If the images are not a receipt, return {"error":"not_receipt"}.`;
 class AIError extends Error{constructor(kind,msg){super(msg);this.kind=kind}}
-async function callModel(model,parts){
- let res;try{res=await fetch(`${API}/models/${model}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':S.settings.key},
-  body:JSON.stringify({contents:[{role:'user',parts}],generationConfig:{temperature:0.1,responseMimeType:'application/json'}})})}catch(e){throw new AIError('net','連不上網路，請確認手機有網路後再試一次。')}
- let j={};try{j=await res.json()}catch(e){}
- if(!res.ok){const m=(j.error&&j.error.message)||'',st=(j.error&&j.error.status)||'';
+const THINK={fast:'low',careful:'medium'};
+async function callModel(model,parts,o={}){
+ const gc={temperature:0.1,responseMimeType:'application/json'};if(o.think)gc.thinkingConfig={thinkingLevel:o.think};
+ const aborted=()=>o.signal&&o.signal.aborted;
+ let res;try{res=await fetch(`${API}/models/${model}:streamGenerateContent?alt=sse`,{method:'POST',signal:o.signal,headers:{'Content-Type':'application/json','x-goog-api-key':S.settings.key},body:JSON.stringify({contents:[{role:'user',parts}],generationConfig:gc})})}
+ catch(e){if(aborted())throw new AIError('slow',model+' 回應太慢');throw new AIError('net',navigator.onLine===false?'手機目前沒有網路，請連上網路後再試一次。':'連線中斷了（通常是 Google 那邊回應太慢，不一定是你的網路），請再試一次。')}
+ if(!res.ok){let j={};try{j=await res.json()}catch(e){}const m=(j.error&&j.error.message)||'',st=(j.error&&j.error.status)||'';
   if(res.status===400&&/API key|API_KEY/i.test(m))throw new AIError('key','金鑰不正確，請到「設定」重新貼上。');
+  if(res.status===400&&/thinking/i.test(m))throw new AIError('nothink',model+' 不支援思考設定');
   if(res.status===403)throw new AIError('key','這把金鑰沒有權限使用 Gemini，請確認是在 Google AI Studio 建立的。');
   if(res.status===404||/not found|not supported/i.test(m))throw new AIError('model',model+' 目前無法使用');
   if(res.status===429||st==='RESOURCE_EXHAUSTED')throw new AIError('quota',model+' 今天的免費額度用完了');
   if(res.status>=500)throw new AIError('busy',model+' 暫時忙線');
   throw new AIError('other','Gemini 回覆錯誤：'+(m||res.status))}
- const txt=(j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts||[]).map(p=>p.text||'').join('');
- const clean=txt.replace(/^```(?:json)?\s*/,'').replace(/```\s*$/,'');
- try{return JSON.parse(clean)}catch(e){const a=clean.indexOf('{'),b=clean.lastIndexOf('}');if(a>=0&&b>a){try{return JSON.parse(clean.slice(a,b+1))}catch(e2){}}throw new AIError('parse',model+' 的回覆看不懂')}
+ let txt='';
+ try{const rd=res.body.getReader(),dec=new TextDecoder();let buf='',first=true;
+  for(;;){const {done,value}=await rd.read();if(done)break;if(first){first=false;o.onFirst&&o.onFirst()}buf+=dec.decode(value,{stream:true});
+   let i;while((i=buf.indexOf('\n'))>=0){const line=buf.slice(0,i).trim();buf=buf.slice(i+1);if(!line.startsWith('data:'))continue;const d=line.slice(5).trim();if(!d||d==='[DONE]')continue;
+    let j;try{j=JSON.parse(d)}catch(e){continue}
+    if(j.error)throw new AIError(j.error.code===429?'quota':'busy',model+' '+(j.error.message||'發生錯誤'));
+    for(const q of (j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts)||[])if(q.text&&!q.thought)txt+=q.text;
+    o.onText&&o.onText(txt)}}}
+ catch(e){if(e instanceof AIError)throw e;if(aborted())throw new AIError('slow',model+' 回應太慢');throw new AIError('net','連線中斷了，請再試一次。')}
+ const clean=txt.trim().replace(/^```(?:json)?\s*/,'').replace(/```\s*$/,'');
+ try{return JSON.parse(clean)}catch(e){const a=clean.indexOf('{'),b=clean.lastIndexOf('}');if(a>=0&&b>a){try{return JSON.parse(clean.slice(a,b+1))}catch(e2){}}throw new AIError('parse',model+' 的回覆不完整')}
 }
-async function readReceipt(images,onStep){
+const LIMIT={first:25000,total:45000};
+async function readReceipt(images,o={}){
  const parts=[{text:PROMPT(images.length)},...images.map(d=>({inline_data:{mime_type:'image/jpeg',data:d}}))];
- const order=[...new Set([S.settings.model,...modelList().filter(m=>!isLite(m)),...modelList().filter(isLite)])];
- let last;
- for(const m of order){for(let attempt=0;attempt<2;attempt++){
-  try{onStep&&onStep(m);const out=await callModel(m,parts);countUse();return {out,model:m}}
-  catch(e){last=e;if(e.kind==='key'||e.kind==='net')throw e;if(e.kind==='busy'&&attempt===0){await new Promise(r=>setTimeout(r,2000));continue}break}}}
- throw new AIError(last&&last.kind==='quota'?'quota':'all',last&&last.kind==='quota'?'所有模型今天的免費額度都用完了，可以先用「手動記一筆」，明天額度會恢復。':'目前讀不了這張收據：'+(last?last.message:''));
+ let queue=[...new Set([S.settings.model,...modelList().filter(m=>!isLite(m)),...modelList().filter(isLite)])];
+ const T0=Date.now(),careful=o.careful||S.settings.mode==='careful';let last,tried=0;
+ while(queue.length){const m=queue.shift();const left=LIMIT.total-(Date.now()-T0);if(left<4000)break;
+  let think=isLite(m)?'low':THINK[careful?'careful':'fast'];
+  for(let attempt=0;attempt<2;attempt++){
+   const ctrl=new AbortController();let got=false;
+   const t1=setTimeout(()=>{if(!got)ctrl.abort()},Math.min(LIMIT.first,left)),t2=setTimeout(()=>ctrl.abort(),left);
+   try{tried++;o.onStep&&o.onStep(m,tried>1);
+    const out=await callModel(m,parts,{think,signal:ctrl.signal,onFirst:()=>{got=true},onText:o.onText});countUse();return {out,model:m,secs:(Date.now()-T0)/1000}}
+   catch(e){last=e;if(e.kind==='key'||e.kind==='net')throw e;
+    if(e.kind==='nothink'&&think){think=null;continue}
+    if(e.kind==='busy'&&attempt===0&&LIMIT.total-(Date.now()-T0)>12000){await new Promise(r=>setTimeout(r,1500));continue}
+    if(e.kind==='slow'){const l=queue.filter(isLite);queue=l.length?l:queue}
+    break}
+   finally{clearTimeout(t1);clearTimeout(t2)}}}
+ if(last&&last.kind==='quota')throw new AIError('quota','所有模型今天的免費額度都用完了，可以先用「手動記一筆」，明天額度會恢復。');
+ if(!last||last.kind==='slow')throw new AIError('slow','AI 這次回應太慢（超過 45 秒），已經自動停止。請再試一次；如果還是太慢，可以把照片拍近一點，或減少分段的張數。');
+ throw new AIError('all','目前讀不了這張收據：'+last.message);
 }
 const num=v=>{const n=parseInt(String(v??'').replace(/[^\d-]/g,''));return isNaN(n)?0:n};
 function toDraft(o,model){
@@ -566,25 +614,32 @@ function toDraft(o,model){
  const pt=allocate(r).pretax;if(r.taxFree==='maybe'&&pt<5000)r.taxFree='no';if(r.taxFree==='yes'&&pt<5000)r._warn.push('未稅金額不到 ¥5,000，可能無法退稅，請確認');
  return r;
 }
-async function analyze(){
+async function analyze(opt={}){
  if(!ui.photos.length){toast('請先拍收據');return}
  const L=document.createElement('div');L.className='loading';
- L.innerHTML=`<div class="rcpt"><i style="width:60%"></i><i></i><i style="width:80%"></i><i></i><i style="width:50%"></i><i></i><span class="beam"></span></div><b>正在讀取收據…</b><span class="muted small" id="lstep">整理 ${ui.photos.length} 段照片</span><span class="muted small">通常需要 10–30 秒</span>`;
- document.body.appendChild(L);const step=m=>{const s=document.getElementById('lstep');if(s)s.textContent=m};
+ L.innerHTML=`<div class="rcpt"><i style="width:60%"></i><i></i><i style="width:80%"></i><i></i><i style="width:50%"></i><i></i><span class="beam"></span></div><b id="lhead">正在讀取收據…</b><span class="muted small" id="lstep">準備 ${ui.photos.length} 段照片</span><span class="muted small" id="ltime">${opt.careful||S.settings.mode==='careful'?'仔細模式，約 15–40 秒':'通常 5–20 秒'}</span>`;
+ document.body.appendChild(L);const $$=id=>document.getElementById(id);const T0=Date.now();
+ const tick=setInterval(()=>{const e=$$('ltime');if(e)e.textContent='已經 '+Math.round((Date.now()-T0)/1000)+' 秒（最多 45 秒）'},1000);
  try{
-  const imgs=[];for(const p of ui.photos)imgs.push(p.data||(p.data=await shrink(p.file)));
-  const {out,model}=await readReceipt(imgs,m=>step('用 '+m+' 辨識與翻譯中…'));
-  L.remove();
+  const imgs=await Promise.all(ui.photos.map(p=>p.data||p.dataP||(p.dataP=shrink(p.file).then(d=>p.data=d))));
+  const {out,model}=await readReceipt(imgs,{careful:opt.careful,
+   onStep:(m,sw)=>{const e=$$('lstep');if(e)e.textContent=(sw?'換用較快的 ':'用 ')+m+' 辨識與翻譯中…'},
+   onText:t=>{const n=(t.match(/"ja"\s*:/g)||[]).length;const e=$$('lhead');if(e&&n)e.textContent='已讀到 '+n+' 個品項…'}});
+  clearInterval(tick);L.remove();
   if(out.error){sheet(`<h3>這好像不是收據</h3><p class="muted">AI 在照片裡找不到收據內容。請靠近一點、光線亮一點再拍一次。</p><button class="btn pri block" data-x>知道了</button>`);return}
-  const keepId=ui.draft&&ui.draft._scan&&ui.draft._new?ui.draft.id:null;const dr=toDraft(out,model);if(keepId)dr.id=keepId;openReceipt(dr,true);
- }catch(e){L.remove();
+  const keepId=ui.draft&&ui.draft._scan&&ui.draft._new?ui.draft.id:null;const dr=toDraft(out,model);if(keepId)dr.id=keepId;dr._careful=!!(opt.careful||S.settings.mode==='careful');dr._secs=Math.round((Date.now()-T0)/1000);openReceipt(dr,true);
+ }catch(e){clearInterval(tick);L.remove();
   sheet(`<h3>沒有讀成功</h3><p class="muted">${esc(e.message||'發生未知錯誤')}</p><div style="display:flex;gap:10px"><button class="btn ghost" style="flex:1" id="mnl">手動記一筆</button><button class="btn pri" style="flex:1" id="rtry">${e.kind==='key'?'去設定':'再試一次'}</button></div>`,(s,c)=>{
-   s.querySelector('#mnl').onclick=()=>{c();openReceipt(newDraft(true),true)};s.querySelector('#rtry').onclick=()=>{c();e.kind==='key'?go('settings'):analyze()}});
+   s.querySelector('#mnl').onclick=()=>{c();openReceipt(newDraft(true),true)};s.querySelector('#rtry').onclick=()=>{c();e.kind==='key'?go('settings'):analyze(opt)}});
  }
 }
+function testImage(){const c=document.createElement('canvas');c.width=480;c.height=360;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,480,360);x.fillStyle='#111';
+ const F='"Hiragino Sans","PingFang TC","Noto Sans JP",sans-serif';x.font=`bold 26px ${F}`;x.fillText('テストストア 新宿店',100,44);x.font=`20px ${F}`;x.fillText('2026/12/04 10:15',30,84);
+ [['※おにぎり 鮭','¥168'],['※緑茶 500ml','¥140'],['レジ袋','¥5']].forEach(([a,b],i)=>{x.fillText(a,30,130+i*36);x.fillText(b,380,130+i*36)});
+ x.font=`bold 24px ${F}`;x.fillText('合計',30,270);x.fillText('¥313',370,270);return c.toDataURL('image/jpeg',.85).split(',')[1]}
 async function testKey(btn){
  const key=($('#gKey')&&$('#gKey').value.trim())||S.settings.key;if(!key){toast('請先貼上 Gemini 金鑰');return}
- S.settings.key=key;save();btn.disabled=true;btn.textContent='測試中…';
+ S.settings.key=key;save();btn.disabled=true;btn.textContent='連線中…';
  try{const res=await fetch(`${API}/models?pageSize=200`,{headers:{'x-goog-api-key':key}});const j=await res.json().catch(()=>({}));
   if(!res.ok)throw new Error(res.status===400||res.status===403?'金鑰不正確或沒有權限':'Google 回覆錯誤 '+res.status);
   const ver=m=>{const v=m.match(/(\d+(?:\.\d+)?)/);return v?parseFloat(v[1]):0};
@@ -592,7 +647,9 @@ async function testKey(btn){
    .filter(m=>/^gemini-.*flash/.test(m)&&!/(image|tts|audio|live|native|thinking|exp|embedding|8b)/.test(m))
    .sort((a,b)=>(isLite(a)-isLite(b))||(/preview/.test(a)-/preview/.test(b))||(ver(b)-ver(a))||(/latest/.test(a)-/latest/.test(b)));
   if(ms.length){S.settings.models=ms.slice(0,8);if(!ms.includes(S.settings.model))S.settings.model=ms[0]}
-  save();render();sheet(`<h3>連線成功</h3><p class="muted">找到 ${ms.length} 個可以讀收據的模型，主要使用 <b>${esc(S.settings.model)}</b>。現在可以開始掃描收據了。</p><button class="btn pri block" data-x>好</button>`);
+  save();btn.textContent='測試讀取速度中…';
+  let speed='';try{const r=await readReceipt([testImage()],{});speed=`用 <b>${esc(r.model)}</b> 讀一張小收據花了 <b>${r.secs.toFixed(1)} 秒</b>（讀到 ${(r.out.items||[]).length} 個品項）。一般收據大約是這個的 1.5–3 倍。`}catch(e){speed='速度測試沒有成功：'+esc(e.message)}
+  render();sheet(`<h3>連線成功</h3><p class="muted">找到 ${ms.length} 個可以讀收據的模型，主要使用 <b>${esc(S.settings.model)}</b>。</p><p class="muted">${speed}</p><p class="small muted">這次測試用掉 1 次免費額度。</p><button class="btn pri block" data-x>好</button>`);
  }catch(e){btn.disabled=false;btn.textContent='測試連線（並更新可用模型）';sheet(`<h3>連線失敗</h3><p class="muted">${esc(e.message==='Failed to fetch'?'連不上網路，請確認手機有網路。':e.message)}</p><button class="btn pri block" data-x>知道了</button>`)}
 }
 
@@ -665,6 +722,7 @@ document.addEventListener('click',e=>{
  if(d.whoall!==undefined){const it=r.items[+d.whoall];it.who=it.who.length===t.members.length?[]:t.members.map(m=>m.id);render();return}
  if(d.edit!==undefined){itemSheet(+d.edit);return}
  if(d.deladj!==undefined){r.adjust.splice(+d.deladj,1);syncManual();render();return}
+ if(d.mode){S.settings.mode=d.mode;save();render();return}
  if(d.tf){r.taxFree=d.tf;render();return}
  if(d.renmem){const m=mem(d.renmem);sheet(`<h3>改名</h3><input class="inp" id="rnV" value="${esc(m.name)}"><button class="btn pri block" id="rnOk" style="margin-top:12px">完成</button>`,(s,c)=>s.querySelector('#rnOk').onclick=()=>{const v=s.querySelector('#rnV').value.trim();if(v){m.name=v;save()}c();render()});return}
  if(d.rmmem){const used=t.receipts.some(x=>x.payers.some(p=>p.m===d.rmmem)||x.items.some(i=>i.who.includes(d.rmmem)));
@@ -676,6 +734,7 @@ document.addEventListener('click',e=>{
   case 'analyze':if(!S.settings.key){sheet(`<h3>還沒設定 Gemini 金鑰</h3><p class="muted">要讀收據，需要先到「設定」貼上你的 Gemini 免費金鑰。</p><div style="display:flex;gap:10px"><button class="btn ghost" style="flex:1" id="dmo">先看示範結果</button><button class="btn pri" style="flex:1" id="toSet">去設定</button></div>`,(s,c)=>{s.querySelector('#toSet').onclick=()=>{c();go('settings')};s.querySelector('#dmo').onclick=()=>{c();openReceipt(demoScan(),true)}});break}
    analyze();break;
   case 'reanalyze':analyze();break;
+  case 'reanalyzeCareful':analyze({careful:true});break;
   case 'cancel':{const back=ui.draft&&ui.draft._new&&ui.draft._scan&&ui.photos.length?'scan':(ui.from==='tax'?'tax':'home');ui.draft=null;go(back);break}
   case 'allSplit':r.items.forEach(i=>i.who=t.members.map(m=>m.id));render();break;
   case 'restTo':sheet(`<h3>未分配的品項都給誰？</h3><div class="chips">${t.members.map(m=>`<button class="chip on" data-restpick="${m.id}">${av(m)}${esc(m.name)}</button>`).join('')}</div>`,(s,c)=>s.querySelectorAll('[data-restpick]').forEach(x=>x.onclick=()=>{r.items.forEach(i=>{if(!i.who.length)i.who=[x.dataset.restpick]});c();render()}));break;
@@ -694,14 +753,17 @@ document.addEventListener('click',e=>{
    if(r.payers.length===1)r.payers[0].amt=r.total;
    if(!r.store.trim())r.store=r.storeJa||'未命名收據';
    const un=r.items.filter(i=>!i.who.length).length;
-   const fin=()=>{if(r._scan){ui.photos.forEach(p=>URL.revokeObjectURL(p.url));ui.photos=[]}const x=clone(r);['_new','_demo','_multi','_scan','_warn','_model'].forEach(k=>delete x[k]);const i=t.receipts.findIndex(y=>y.id===x.id);i<0?t.receipts.push(x):t.receipts[i]=x;save();ui.draft=null;go('home');toast('已存進帳本')};
+   const fin=()=>{if(r._scan){ui.photos.forEach(p=>URL.revokeObjectURL(p.url));ui.photos=[]}const x=clone(r);['_new','_demo','_multi','_scan','_warn','_model','_careful','_secs'].forEach(k=>delete x[k]);const i=t.receipts.findIndex(y=>y.id===x.id);i<0?t.receipts.push(x):t.receipts[i]=x;save();ui.draft=null;go('home');toast('已存進帳本')};
    un?ask(`還有 ${un} 個品項沒分配，先算在付款人身上？`,'先這樣存',fin):fin();break}
   case 'delRcpt':ask('刪除這張收據？','刪除',()=>{t.receipts=t.receipts.filter(x=>x.id!==r.id);save();ui.draft=null;go('home');toast('已刪除')});break;
   case 'addMem':{const n=$('#newMem').value.trim();if(!n)return;t.members.push({id:uid(),name:n,color:COLORS[t.members.length%COLORS.length]});save();render();toast('已加入 '+n);break}
   case 'testKey':testKey(b);break;
   case 'shareImg':shareImage();break;
-  case 'export':{const txt=JSON.stringify(S);try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'application/json'}));a.download=`JaScan備份-${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();a.remove()}catch(e){}navigator.clipboard?.writeText(txt).then(()=>toast('已複製備份，請貼到備忘錄保存'),()=>sheet(`<h3>複製這段文字保存</h3><textarea class="inp" readonly>${esc(txt)}</textarea>`));break}
-  case 'import':sheet(`<h3>貼上備份</h3><textarea class="inp" id="impT" placeholder="貼在這裡"></textarea><button class="btn pri block" id="impGo" style="margin-top:10px">還原</button>`,(s,c)=>s.querySelector('#impGo').onclick=()=>{try{const x=JSON.parse(s.querySelector('#impT').value);if(!x.trips)throw 0;S=x;migrate();save();c();go('home');toast('已還原')}catch(err){toast('這段文字不是有效的備份')}});break;
+  case 'export':{S.settings.lastBackup=new Date().toISOString().slice(0,10);save();const bk=clone(S);bk.settings.key='';const txt=JSON.stringify(bk);const fn=`JaScan備份-${S.settings.lastBackup}.json`;
+   (async()=>{try{const f=new File([txt],fn,{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f]});toast('備份完成');render();return}}catch(e){if(e.name==='AbortError')return}
+    try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'application/json'}));a.download=fn;document.body.appendChild(a);a.click();a.remove()}catch(e){}
+    navigator.clipboard?.writeText(txt).then(()=>toast('已複製備份，請貼到備忘錄保存'),()=>sheet(`<h3>複製這段文字保存</h3><textarea class="inp" readonly>${esc(txt)}</textarea>`));render()})();break}
+  case 'import':sheet(`<h3>還原備份</h3><label class="btn ghost block" style="margin-bottom:10px">選擇備份檔<input type="file" id="impF" accept=".json,application/json" hidden></label><textarea class="inp" id="impT" placeholder="或把複製的備份貼在這裡"></textarea><button class="btn pri block" id="impGo" style="margin-top:10px">還原</button>`,(s,c)=>{s.querySelector('#impF').onchange=async e=>{const f=e.target.files[0];if(f)s.querySelector('#impT').value=await f.text()};s.querySelector('#impGo').onclick=()=>{try{const x=JSON.parse(s.querySelector('#impT').value);if(!x.trips)throw 0;const k=S.settings.key;S=x;migrate();if(!S.settings.key)S.settings.key=k;save();c();go('home');toast('已還原')}catch(err){toast('這段文字不是有效的備份')}}});break;
   case 'delTrip':ask(`刪除「${esc(t.name)}」和它的 ${t.receipts.length} 張收據？刪除後無法復原。`,'刪除',()=>{S.trips=S.trips.filter(x=>x.id!==t.id);
    if(!S.trips.length){const me={id:uid(),name:'我',color:COLORS[0]};S.trips=[{id:uid(),name:'我的旅程',start:new Date().toISOString().slice(0,10),end:new Date().toISOString().slice(0,10),members:[me],receipts:[],repaid:[],rate:clone(t.rate)}]}
    S.cur=S.trips[0].id;save();go('home');toast('已刪除')});break;
@@ -711,15 +773,16 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('change',e=>{
  const el=e.target,d=el.dataset,t=trip(),r=ui.draft;
- if(el.id==='camIn'||el.id==='libIn'){[...el.files].forEach(f=>ui.photos.push({file:f,url:URL.createObjectURL(f)}));el.value='';if(ui.view!=='scan')go('scan');else render();return}
+ if(el.type==='date'){const sp=el.parentElement.querySelector('.dtxt');if(sp)sp.textContent=fmtDay(el.value,!!el.dataset.yr)}
+ if(el.id==='camIn'||el.id==='libIn'){[...el.files].forEach(f=>{const p={file:f,url:URL.createObjectURL(f)};p.dataP=shrink(f).then(d=>p.data=d).catch(()=>null);ui.photos.push(p)});el.value='';if(ui.view!=='scan')go('scan');else render();return}
  if(d.act==='multi'){if(el.checked){r._multi=true;if(r.payers.length===1)r.payers[0].amt=r.total}else{r._multi=false;r.payers=[{m:mainPayer(r)||t.members[0].id,amt:r.total}]}render();return}
  if(d.claim){const x=t.receipts.find(y=>y.id===d.claim);x.claimed=el.checked;save();render();toast(el.checked?'退稅金已依品項分回給大家':'已取消');return}
  if(d.carry){const [id,k]=d.carry.split(':');t.receipts.find(y=>y.id===id).items[+k].carry=el.checked;save();return}
  if(d.act==='manualRate'){t.rate.manual=el.checked?+(t.rate.auto||0.2).toFixed(4):null;save();render();return}
  if(el.id==='mRate'){const v=parseFloat(el.value);if(v>0&&v<1){t.rate.manual=v;save();toast('匯率已更新')}else toast('請輸入像 0.2050 這樣的數字');return}
  if(el.id==='tName'){t.name=el.value.trim()||t.name;save();return}
- if(el.id==='tStart'){t.start=el.value;save();return}
- if(el.id==='tEnd'){t.end=el.value;save();return}
+ if(el.id==='tStart'){if(el.value){t.start=el.value;if(t.end<t.start)t.end=t.start;save();render()}return}
+ if(el.id==='tEnd'){if(el.value){t.end=el.value<t.start?t.start:el.value;save();render()}return}
  if(el.id==='gKey'){S.settings.key=el.value.trim();save();toast('金鑰已存在這支手機');return}
  if(el.id==='gModel'){S.settings.model=el.value;save();return}
  if(r&&d.f){if(d.f==='printed'){const v=el.value.replace(/\D/g,'');r.printed=v?parseInt(v):null}else r[d.f]=el.value;render();return}
@@ -730,6 +793,7 @@ document.addEventListener('change',e=>{
 (async()=>{try{const t=trip();if(t.rate.updated===new Date().toISOString().slice(0,10)&&t.rate.auto)return;
  const res=await fetch('https://open.er-api.com/v6/latest/JPY');const j=await res.json();const v=j?.rates?.TWD;
  if(v){S.trips.forEach(x=>{x.rate.auto=v;x.rate.updated=new Date().toISOString().slice(0,10)});save();render()}}catch(e){}})();
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist().then(ok=>{S.settings.persisted=ok;save()})}catch(e){}
 render();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
